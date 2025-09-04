@@ -1,0 +1,86 @@
+﻿<Window x:Class="MinecraftServerTool.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Minecraft Server Tool" Height="450" Width="800"
+        Loaded="Window_Loaded">
+
+    <Grid>
+        <!-- Two main columns: 
+        Left = Main menu 
+        Right = Sidebar -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- LEFT COLUMN: Main Server Menu -->
+        <StackPanel Grid.Column="0" Margin="20">
+            <!-- Folder Selection -->
+            <TextBlock Text="Modpack Folder:" FontWeight="Bold"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBox Name="txtModpackFolderPath" Width="400" TextChanged="txtModpackFolderPath_TextChanged"/>
+                <Button Name="btnBrowseModpackFolder" Content="Browse..." Click="btnBrowseFolder_Click"/>
+            </StackPanel>
+            
+            <!-- Minecraft Version Selection -->
+            <TextBlock Text="Minecraft Version:" FontWeight="Bold"/>
+            <ComboBox x:Name="cbMinecraftVersion" Width="150" HorizontalAlignment="Left" 
+                      SelectionChanged="cbMinecraftVersion_SelectionChanged"/>
+
+            <!-- Forge Version Selection -->
+            <TextBlock Text="Forge Version:" FontWeight="Bold" Margin="10 20 0 10"/>
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="rbStable" Content="Latest Stable" Margin="20 0 0 0" 
+                             Checked="rbStable_Checked"/>
+                <RadioButton x:Name="rbExperimental" Content="Latest Experimental" Margin="10 0 0 0" 
+                             Checked="rbExperimental_Checked"/>
+                <RadioButton x:Name="rbCustom" Content="Custom Version" Margin="10 0 10 0" 
+                             Checked="rbCustom_Checked"/>
+                <ComboBox x:Name="cbCustomBuild" Width="150" Visibility="Collapsed"/>
+            </StackPanel>
+
+            <!-- Hosting Selection -->
+            <TextBlock Text="Hosting Method:" FontWeight="Bold" Margin="10 20 0 10"/>
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="rbPlayit" Content="Playit.gg" Margin="10 0 0 0"/>
+                <RadioButton x:Name="rbNgrok" Content="Ngrok" Margin="20 0 0 0"/>
+                <RadioButton x:Name="rbPortForward" Content="Port Forwarding" Margin="10 0 0 0"/>
+            </StackPanel>
+
+            <!-- Action Buttons -->
+            <StackPanel Orientation="Horizontal" Margin="0 10 0 0">
+                <Button Content="Install Forge" Width="150" Name="btnInstallForge" Click="btnInstallForge_Click"/>
+                <Button Content="Start Server" Width="150" Name="btnStartServer" Click="btnStartServer_Click"/>
+                <Button Content="Restart Server" Width="150" Name="btnRestartServer" Click="btnRestartServer_Click"/>
+            </StackPanel>
+
+            <!-- Server Output -->
+            <TextBlock Text="Server Address:" FontWeight="Bold" Margin="10 20 0 0"/>
+            <Button x:Name="btnServerAddress" Content="N/A" Click="btnServerAddress_Click"
+                    Width="100" HorizontalAlignment="Left" Margin="20 0 0 0"/>
+        </StackPanel>
+
+        <!-- RIGHT COLUMN: Sidebars -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="3*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Server Properties Sidebar -->
+            <Border Grid.Row="0" Background="LightBlue">
+                <TextBlock Text="Server Properties Section" 
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+
+            <!-- Java Arguments -->
+            <Border Grid.Row="1" Background="LightCoral">
+                <TextBlock Text="Java Arguments" 
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
