@@ -2,7 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:local="clr-namespace:MinecraftServerTool.Controls"
         mc:Ignorable="d"
         Title="Minecraft Server Tool" Height="450" Width="800"
         Loaded="Window_Loaded">
@@ -71,10 +72,7 @@
             </Grid.RowDefinitions>
 
             <!-- Server Properties Sidebar -->
-            <Border Grid.Row="0" Background="LightBlue">
-                <TextBlock Text="Server Properties Section" 
-                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </Border>
+            <local:ServerPropertiesControl Grid.Column="1" Visibility="Collapsed" x:Name="spServerPropertiesPanel"/>
 
             <!-- Java Arguments -->
             <Border Grid.Row="1" Background="LightCoral">

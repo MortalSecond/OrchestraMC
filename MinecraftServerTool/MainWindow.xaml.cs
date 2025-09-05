@@ -43,6 +43,13 @@ namespace MinecraftServerTool
         {
             public Dictionary<string, string> promos { get; set; }
         }
+        // Initializing class for the server.properties config file
+        // Structure:
+        //  allow-flight=false
+        //  allow-nether=true
+        //  difficulty=easy
+        //  max-players=20
+
 
         // Helper method to ensure there's text in the first two inputs
         private bool ValidateInputs(string folderPath, string mcVersion)
@@ -831,6 +838,8 @@ namespace MinecraftServerTool
                 rbCustom.IsChecked = true;
                 rbCustom_Checked(sender, e);
                 cbCustomBuild.SelectedItem = forgeVersion;
+
+                spServerPropertiesPanel.Visibility = Visibility.Visible;
             }
         }
 
