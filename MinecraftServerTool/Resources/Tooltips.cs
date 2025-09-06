@@ -20,7 +20,7 @@
 
         public const string MOTD = "The message displayed in the server list. It supports color and formatting codes.";
 
-        public const string NetworkCompressionTreshold = "How big should a packet be compressed. Somewhat CPU-intensive. \nLower values can make players with bad internet connections have less lag, but will strain your CPU and give the host lag instead. \nHigher values make it easier on the host, but might make it harder for low-end players to connect to the server.";
+        public const string NetworkCompressionTreshold = "How big should a packet be compressed, default being 256 kilobytes. Somewhat CPU-intensive. \nLower values can make players with bad internet connections have less lag, but will strain your CPU and give the host lag instead. \nHigher values make it easier on the host, but might make it harder for low-end players to connect to the server.";
 
         public const string OnlineMode = "When enabled, the server verifies players with Mojang’s authentication servers. Disabling it will allow players with cracked Minecraft to join your server.";
 
