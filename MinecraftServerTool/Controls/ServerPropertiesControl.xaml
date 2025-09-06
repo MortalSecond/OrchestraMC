@@ -21,14 +21,19 @@
                     <ComboBoxItem Content="Disabled"/>
                 </ComboBox>
 
-                <TextBlock Text="Allow Nether:" FontWeight="Bold" Margin="5 5 0 5"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Allow Nether:" FontWeight="Bold" Margin="5 5 0 5"/>
+                </StackPanel>
                 <ComboBox x:Name="cbAllowNether" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
                       SelectionChanged="ServerPropertyChanged">
                     <ComboBoxItem Content="Enabled"/>
                     <ComboBoxItem Content="Disabled"/>
                 </ComboBox>
 
-                <TextBlock Text="Command Blocks:" FontWeight="Bold" Margin="5 5 0 5"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Command Blocks:" FontWeight="Bold" Margin="5 5 0 5"/>
+                    <local:TooltipButton TooltipText="{x:Static resources:Tooltips.CommandBlocks}" Margin="5,0,0,0"/>
+                </StackPanel>
                 <ComboBox x:Name="cbCommandBlocks" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
                       SelectionChanged="ServerPropertyChanged">
                     <ComboBoxItem Content="Enabled"/>
