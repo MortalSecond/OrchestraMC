@@ -3,24 +3,45 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:MinecraftServerTool.Controls"
+             xmlns:local="clr-namespace:MinecraftServerTool.Controls" 
+             xmlns:resources="clr-namespace:MinecraftServerTool.Resources"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             d:DesignHeight="450" d:DesignWidth="800"
+             Background="Gray">
     <Grid>
-        <StackPanel Orientation="Vertical">
-            <TextBlock Text="Allow Flight:" FontWeight="Bold" Margin="5 5 0 5"/>
-            <ComboBox x:Name="cbAllowFlight" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Orientation="Vertical">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Allow Flight:" FontWeight="Bold" Margin="5 5 0 5"/>
+                    <local:TooltipButton TooltipText="{x:Static resources:Tooltips.AllowFlight}" Margin="5,0,0,0"/>
+                </StackPanel>
+                <ComboBox x:Name="cbAllowFlight" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
                       SelectionChanged="ServerPropertyChanged">
-                <ComboBoxItem Content="Enabled"/>
-                <ComboBoxItem Content="Disabled"/>
-            </ComboBox>
-            
-            <TextBlock Text="Command Blocks:" FontWeight="Bold" Margin="5 5 0 5"/>
-            <ComboBox x:Name="cbCommandBlocks" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                    <ComboBoxItem Content="Enabled"/>
+                    <ComboBoxItem Content="Disabled"/>
+                </ComboBox>
+
+                <TextBlock Text="Allow Nether:" FontWeight="Bold" Margin="5 5 0 5"/>
+                <ComboBox x:Name="cbAllowNether" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
                       SelectionChanged="ServerPropertyChanged">
-                <ComboBoxItem Content="Enabled"/>
-                <ComboBoxItem Content="Disabled"/>
-            </ComboBox>
-        </StackPanel>
+                    <ComboBoxItem Content="Enabled"/>
+                    <ComboBoxItem Content="Disabled"/>
+                </ComboBox>
+
+                <TextBlock Text="Command Blocks:" FontWeight="Bold" Margin="5 5 0 5"/>
+                <ComboBox x:Name="cbCommandBlocks" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                      SelectionChanged="ServerPropertyChanged">
+                    <ComboBoxItem Content="Enabled"/>
+                    <ComboBoxItem Content="Disabled"/>
+                </ComboBox>
+
+                <TextBlock Text="Difficulty:" FontWeight="Bold" Margin="5 5 0 5"/>
+                <ComboBox x:Name="cbDifficulty" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                      SelectionChanged="ServerPropertyChanged">
+                    <ComboBoxItem Content="Enabled"/>
+                    <ComboBoxItem Content="Disabled"/>
+                </ComboBox>
+            </StackPanel>
+        </ScrollViewer>
     </Grid>
 </UserControl>
