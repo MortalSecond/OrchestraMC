@@ -75,7 +75,8 @@
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Max Players:" FontWeight="Bold" Margin="5 5 0 5"/>
                 </StackPanel>
-                <TextBox x:Name="txtMaxPlayers" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"/>
+                <TextBox x:Name="txtMaxPlayers" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                         TextChanged="ServerPropertyChanged"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Online Status:" FontWeight="Bold" Margin="5 5 0 5"/>
@@ -105,19 +106,22 @@
                     <TextBlock Text="World Name:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.LevelName}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <TextBox x:Name="txtLevelName" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"/>
+                <TextBox x:Name="txtLevelName" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                         TextChanged="ServerPropertyChanged"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Max World Size:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.MaxWorldSize}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <TextBox x:Name="txtMaxWorldSize" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"/>
+                <TextBox x:Name="txtMaxWorldSize" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                         TextChanged="ServerPropertyChanged"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Seed:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.LevelSeed}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <TextBox x:Name="txtLevelSeed" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"/>
+                <TextBox x:Name="txtLevelSeed" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                         TextChanged="ServerPropertyChanged"/>
             </StackPanel>
         </ScrollViewer>
     </Grid>
