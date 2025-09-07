@@ -1,33 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using MinecraftServerTool.ViewModels;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace MinecraftServerTool.Controls
 {
-    /// <summary>
-    /// Interaction logic for ServerPropertiesControl.xaml
-    /// </summary>
     public partial class ServerPropertiesControl : UserControl
     {
+        public ServerPropertiesViewModel ViewModel { get; }
+
         public ServerPropertiesControl()
         {
             InitializeComponent();
-        }
-
-        private void ServerPropertyChanged(object sender, SelectionChangedEventArgs e)
-        {
-
+            ViewModel = new ServerPropertiesViewModel();
+            DataContext = ViewModel;
         }
     }
 }

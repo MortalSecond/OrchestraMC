@@ -15,113 +15,91 @@
                     <TextBlock Text="Allow Flight:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.AllowFlight}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <ComboBox x:Name="cbAllowFlight" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                      SelectionChanged="ServerPropertyChanged">
-                    <ComboBoxItem Content="Enabled"/>
-                    <ComboBoxItem Content="Disabled"/>
-                </ComboBox>
+                <ComboBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                          SelectedValue="{Binding AllowFlight, Mode=TwoWay}"
+                          ItemsSource="{Binding Booleans}"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Allow Nether:" FontWeight="Bold" Margin="5 5 0 5"/>
                 </StackPanel>
-                <ComboBox x:Name="cbAllowNether" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                      SelectionChanged="ServerPropertyChanged">
-                    <ComboBoxItem Content="Enabled"/>
-                    <ComboBoxItem Content="Disabled"/>
-                </ComboBox>
+                <ComboBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                          SelectedValue="{Binding AllowNether, Mode=TwoWay}"
+                          ItemsSource="{Binding Booleans}"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Command Blocks:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.CommandBlocks}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <ComboBox x:Name="cbCommandBlocks" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                      SelectionChanged="ServerPropertyChanged">
-                    <ComboBoxItem Content="Enabled"/>
-                    <ComboBoxItem Content="Disabled"/>
-                </ComboBox>
+                <ComboBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                          SelectedValue="{Binding CommandBlocks, Mode=TwoWay}"
+                          ItemsSource="{Binding Booleans}"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Difficulty:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.Difficulty}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <ComboBox x:Name="cbDifficulty" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                      SelectionChanged="ServerPropertyChanged">
-                    <ComboBoxItem Content="Peaceful"/>
-                    <ComboBoxItem Content="Easy"/>
-                    <ComboBoxItem Content="Normal"/>
-                    <ComboBoxItem Content="Hard"/>
-                </ComboBox>
+                <ComboBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                          SelectedValue="{Binding Difficulty, Mode=TwoWay}"
+                          ItemsSource="{Binding Difficulties}"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Hardcore Mode:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.Hardcore}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <ComboBox x:Name="cbHardcoreMode" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                      SelectionChanged="ServerPropertyChanged">
-                    <ComboBoxItem Content="Enabled"/>
-                    <ComboBoxItem Content="Disabled"/>
-                </ComboBox>
+                <ComboBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                          SelectedValue="{Binding Hardcore, Mode=TwoWay}"
+                          ItemsSource="{Binding Booleans}"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="PVP:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.Pvp}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <ComboBox x:Name="cbPvp" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                      SelectionChanged="ServerPropertyChanged">
-                    <ComboBoxItem Content="Enabled"/>
-                    <ComboBoxItem Content="Disabled"/>
-                </ComboBox>
+                <ComboBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0" 
+                          SelectedValue="{Binding Pvp, Mode=TwoWay}" 
+                          ItemsSource="{Binding Booleans}"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Max Players:" FontWeight="Bold" Margin="5 5 0 5"/>
                 </StackPanel>
-                <TextBox x:Name="txtMaxPlayers" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                         TextChanged="ServerPropertyChanged"/>
+                <TextBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                         Text="{Binding MaxPlayers, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Online Status:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.OnlineMode}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <ComboBox x:Name="cbOnlineMode" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                          SelectionChanged="ServerPropertyChanged">
-                    <ComboBoxItem Content="Enabled"/>
-                    <ComboBoxItem Content="Disabled"/>
-                </ComboBox>
+                <ComboBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                          SelectedValue="{Binding OnlineMode, Mode=TwoWay}"
+                          ItemsSource="{Binding Booleans}"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Network Compression:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.NetworkCompressionTreshold}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <ComboBox x:Name="cbNetworkCompressionTreshold" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                          SelectionChanged="ServerPropertyChanged">
-                    <ComboBoxItem Content="Disabled"/>
-                    <ComboBoxItem Content="64"/>
-                    <ComboBoxItem Content="128"/>
-                    <ComboBoxItem Content="256"/>
-                    <ComboBoxItem Content="512"/>
-                    <ComboBoxItem Content="Everything"/>
-                </ComboBox>
+                <ComboBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                          SelectedValue="{Binding NetworkCompression, Mode=TwoWay}"
+                          ItemsSource="{Binding CompressionOptions}"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="World Name:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.LevelName}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <TextBox x:Name="txtLevelName" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                         TextChanged="ServerPropertyChanged"/>
+                <TextBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                         Text="{Binding LevelName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Max World Size:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.MaxWorldSize}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <TextBox x:Name="txtMaxWorldSize" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                         TextChanged="ServerPropertyChanged"/>
+                <TextBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                         Text="{Binding MaxWorldSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Seed:" FontWeight="Bold" Margin="5 5 0 5"/>
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.LevelSeed}" Margin="5,0,0,0"/>
                 </StackPanel>
-                <TextBox x:Name="txtLevelSeed" Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                         TextChanged="ServerPropertyChanged"/>
+                <TextBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
+                         Text="{Binding LevelSeed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
             </StackPanel>
         </ScrollViewer>
     </Grid>
