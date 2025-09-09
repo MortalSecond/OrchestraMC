@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using MinecraftServerTool.Controls;
+using MinecraftServerTool.ViewModels;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -18,6 +20,14 @@ namespace MinecraftServerTool
       public MainWindow()
         {
             InitializeComponent();
+
+            var serverPropertiesVM = new ServerPropertiesViewModel();
+            spServerPropertiesPanel.DataContext = serverPropertiesVM;
+
+            serverPropertiesVM.RestartRequired += () =>
+            {
+                UpdateRestartButtonState("Restart Required", true);
+            };
         }
         // Initializes class for the commandline of the
         // Forge Server JVM

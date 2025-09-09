@@ -1,10 +1,14 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 
 namespace MinecraftServerTool.ViewModels
 {
     public class ServerPropertiesViewModel : INotifyPropertyChanged
     {
+        public event Action RestartRequired;
+
+        // Actual server.properties fields
         private bool _allowFlight;
         private bool _allowNether;
         private bool _commandBlocks;
@@ -20,8 +24,11 @@ namespace MinecraftServerTool.ViewModels
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        private void OnPropertyChanged(string propertyName) =>
+        private void OnPropertyChanged(string propertyName)
+        {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            RestartRequired?.Invoke();
+        }
 
         public bool AllowFlight
         {

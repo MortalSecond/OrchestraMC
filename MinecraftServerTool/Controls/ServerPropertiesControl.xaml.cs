@@ -10,8 +10,6 @@ namespace MinecraftServerTool.Controls
         public ServerPropertiesControl()
         {
             InitializeComponent();
-            ViewModel = new ServerPropertiesViewModel();
-            DataContext = ViewModel;
         }
     }
 }
