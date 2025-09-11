@@ -71,27 +71,32 @@ namespace MinecraftServerTool.Services
                 vm.LevelSeed = seed;
         }
 
-        public static void SaveProperties(string filePath,Dictionary<string, string> props,ServerPropertiesViewModel vm)
+        public static void SaveServerProperties(string modpackPath, ServerPropertiesViewModel viewModel)
         {
-            // Updates keys
-            props["allow-flight"] = vm.AllowFlight.ToString().ToLower();
-            props["allow-nether"] = vm.AllowNether.ToString().ToLower();
-            props["enable-command-block"] = vm.CommandBlocks.ToString().ToLower();
-            props["difficulty"] = vm.Difficulty;
-            props["hardcore"] = vm.Hardcore.ToString().ToLower();
-            props["pvp"] = vm.Pvp.ToString().ToLower();
-            props["max-players"] = vm.MaxPlayers.ToString();
-            props["online-mode"] = vm.OnlineMode.ToString().ToLower();
-            props["network-compression-threshold"] = vm.NetworkCompression;
-            props["level-name"] = vm.LevelName;
-            props["max-world-size"] = vm.MaxWorldSize.ToString();
-            props["level-seed"] = vm.LevelSeed ?? "";
+            string filePath = Path.Combine(modpackPath, "server.properties");
+            var properties = ParseServerProperties(modpackPath);
 
-            // Rewrites
-            var writer = new StreamWriter(filePath);
-            foreach (var kv in props)
+            // Updates dictionary with ViewModel values
+            properties["allow-flight"] = viewModel.AllowFlight.ToString();
+            properties["allow-nether"] = viewModel.AllowNether.ToString();
+            properties["enable-command-block"] = viewModel.CommandBlocks.ToString();
+            properties["difficulty"] = viewModel.Difficulty;
+            properties["hardcore"] = viewModel.Hardcore.ToString();
+            properties["pvp"] = viewModel.Pvp.ToString();
+            properties["max-players"] = viewModel.MaxPlayers.ToString();
+            properties["online-mode"] = viewModel.OnlineMode.ToString();
+            properties["network-compression-treshold"] = viewModel.NetworkCompression.ToString();
+            properties["level-name"] = viewModel.LevelName.ToString();
+            properties["max-world-size"] = viewModel.MaxWorldSize.ToString();
+            properties["level-seed"] = viewModel.LevelSeed.ToString();
+
+            // Writes back to file
+            using (var writer = new StreamWriter(filePath))
             {
-                writer.WriteLine($"{kv.Key}={kv.Value}");
+                foreach (var kvp in properties)
+                {
+                    writer.WriteLine($"{kvp.Key}={kvp.Value}");
+                }
             }
         }
 

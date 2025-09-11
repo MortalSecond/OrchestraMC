@@ -798,6 +798,9 @@ namespace MinecraftServerTool
         {
             string modpackPath = txtModpackFolderPath.Text;
 
+            if (btnRestartServer.Content.ToString() == "Restart Required")
+                ServerPropertiesService.SaveServerProperties(modpackPath, serverPropertiesVM);
+
             UpdateRestartButtonState("Saving...");
             KillServer();
             await Task.Delay(5000);
