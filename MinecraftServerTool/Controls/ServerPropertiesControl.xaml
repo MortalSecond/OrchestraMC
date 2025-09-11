@@ -11,6 +11,9 @@
              Background="Gray">
     <UserControl.Resources>
         <helpers:BoolToEnabledDisabledConverter x:Key="BoolToEnabledDisabledConverter"/>
+        <helpers:DifficultyConverter x:Key="DifficultyConverter"/>
+        <helpers:CompressionConverter x:Key="CompressionConverter"/>
+        <helpers:SeedConverter x:Key="SeedConverter"/>
     </UserControl.Resources>
     <Grid>
         <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -43,7 +46,7 @@
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.Difficulty}" Margin="5,0,0,0"/>
                 </StackPanel>
                 <ComboBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                          SelectedValue="{Binding Difficulty, Mode=TwoWay, Converter={StaticResource BoolToEnabledDisabledConverter}}"
+                          SelectedValue="{Binding Difficulty, Mode=TwoWay, Converter={StaticResource DifficultyConverter}}"
                           ItemsSource="{Binding Difficulties}"/>
 
                 <StackPanel Orientation="Horizontal">
@@ -81,7 +84,7 @@
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.NetworkCompressionTreshold}" Margin="5,0,0,0"/>
                 </StackPanel>
                 <ComboBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                          SelectedValue="{Binding NetworkCompression, Mode=TwoWay, Converter={StaticResource BoolToEnabledDisabledConverter}}"
+                          SelectedValue="{Binding NetworkCompression, Mode=TwoWay, Converter={StaticResource CompressionConverter}}"
                           ItemsSource="{Binding CompressionOptions}"/>
 
                 <StackPanel Orientation="Horizontal">
@@ -103,7 +106,8 @@
                     <local:TooltipButton TooltipText="{x:Static resources:Tooltips.LevelSeed}" Margin="5,0,0,0"/>
                 </StackPanel>
                 <TextBox Width="120" HorizontalAlignment="Left" Margin="20 0 0 0"
-                         Text="{Binding LevelSeed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                         Text="{Binding LevelSeed, Mode=TwoWay, Converter={StaticResource SeedConverter},
+                    UpdateSourceTrigger=PropertyChanged}"/>
             </StackPanel>
         </ScrollViewer>
     </Grid>

@@ -1,5 +1,6 @@
 ﻿using MinecraftServerTool.Controls;
 using MinecraftServerTool.ViewModels;
+using MinecraftServerTool.Services;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -17,11 +18,14 @@ namespace MinecraftServerTool
 {
     public partial class MainWindow : Window
     {
-      public MainWindow()
+        private readonly ServerPropertiesService serverPropertiesService;
+        private readonly ServerPropertiesViewModel serverPropertiesVM;
+        public MainWindow()
         {
             InitializeComponent();
 
-            var serverPropertiesVM = new ServerPropertiesViewModel();
+            serverPropertiesService = new ServerPropertiesService();
+            serverPropertiesVM = new ServerPropertiesViewModel();
             spServerPropertiesPanel.DataContext = serverPropertiesVM;
 
             serverPropertiesVM.RestartRequired += () =>
@@ -850,6 +854,9 @@ namespace MinecraftServerTool
                 cbCustomBuild.SelectedItem = forgeVersion;
 
                 spServerPropertiesPanel.Visibility = Visibility.Visible;
+
+                var dict = ServerPropertiesService.ParseServerProperties(txtModpackFolderPath.Text);
+                ServerPropertiesService.LoadServerProperties(dict, serverPropertiesVM);
             }
         }
 

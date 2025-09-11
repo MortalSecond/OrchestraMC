@@ -63,6 +63,7 @@
     </ApplicationDefinition>
     <Compile Include="Helpers\Converters.cs" />
     <Compile Include="Resources\Tooltips.cs" />
+    <Compile Include="Services\ServerPropertiesService.cs" />
     <Compile Include="ViewModels\ServerPropertiesViewModel.cs" />
     <Page Include="Controls\JavaArgumentsControl.xaml">
       <SubType>Designer</SubType>
