@@ -7,6 +7,7 @@ namespace MinecraftServerTool.ViewModels
     public class ServerPropertiesViewModel : INotifyPropertyChanged
     {
         public event Action RestartRequired;
+        private bool _isLoading = false;
 
         // Actual server.properties fields
         private bool? _allowFlight;
@@ -27,7 +28,15 @@ namespace MinecraftServerTool.ViewModels
         private void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-            RestartRequired?.Invoke();
+
+            if (IsLoading == false)
+                RestartRequired?.Invoke();
+        }
+
+        public bool IsLoading
+        {
+            get => _isLoading;
+            set { _isLoading = value;}
         }
 
         public bool? AllowFlight

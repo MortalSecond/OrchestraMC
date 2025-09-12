@@ -32,6 +32,8 @@ namespace MinecraftServerTool.Services
 
         public static void LoadServerProperties(Dictionary<string, string> props,ServerPropertiesViewModel vm)
         {
+            vm.IsLoading = true;
+
             vm.AllowFlight          = props.GetBoolOrNull("allow-flight");
             vm.AllowNether          = props.GetBoolOrNull("allow-nether");
             vm.CommandBlocks        = props.GetBoolOrNull("enable-command-block");
@@ -46,6 +48,8 @@ namespace MinecraftServerTool.Services
             vm.LevelName            = props.GetOrNull("level-name");
             vm.MaxWorldSize         = props.GetIntOrNull("max-world-size");
             vm.LevelSeed            = props.GetOrNull("level-seed");
+
+            vm.IsLoading = false;
         }
 
         public static void SaveServerProperties(string modpackPath, ServerPropertiesViewModel viewModel)
