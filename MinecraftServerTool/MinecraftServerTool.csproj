@@ -65,11 +65,11 @@
     <Compile Include="Resources\Tooltips.cs" />
     <Compile Include="Services\ServerPropertiesService.cs" />
     <Compile Include="ViewModels\ServerPropertiesViewModel.cs" />
-    <Page Include="Controls\JavaArgumentsControl.xaml">
+    <Page Include="Controls\Sidebars\JavaArgumentsControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Controls\ServerPropertiesControl.xaml">
+    <Page Include="Controls\Sidebars\ServerPropertiesControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -85,10 +85,10 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Controls\JavaArgumentsControl.xaml.cs">
+    <Compile Include="Controls\Sidebars\JavaArgumentsControl.xaml.cs">
       <DependentUpon>JavaArgumentsControl.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Controls\ServerPropertiesControl.xaml.cs">
+    <Compile Include="Controls\Sidebars\ServerPropertiesControl.xaml.cs">
       <DependentUpon>ServerPropertiesControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Controls\TooltipButton.xaml.cs">
@@ -126,8 +126,6 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Controls\Sidebars\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
