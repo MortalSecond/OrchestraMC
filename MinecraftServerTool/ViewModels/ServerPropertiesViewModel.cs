@@ -9,17 +9,17 @@ namespace MinecraftServerTool.ViewModels
         public event Action RestartRequired;
 
         // Actual server.properties fields
-        private bool _allowFlight;
-        private bool _allowNether;
-        private bool _commandBlocks;
+        private bool? _allowFlight;
+        private bool? _allowNether;
+        private bool? _commandBlocks;
         private string _difficulty;
-        private bool _hardcore;
-        private bool _pvp;
-        private int _maxPlayers;
-        private bool _onlineMode;
+        private bool? _hardcore;
+        private bool? _pvp;
+        private int? _maxPlayers;
+        private bool? _onlineMode;
         private string _networkCompression;
         private string _levelName;
-        private int _maxWorldSize;
+        private int? _maxWorldSize;
         private string _levelSeed;
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -30,19 +30,19 @@ namespace MinecraftServerTool.ViewModels
             RestartRequired?.Invoke();
         }
 
-        public bool AllowFlight
+        public bool? AllowFlight
         {
             get => _allowFlight;
             set { _allowFlight = value; OnPropertyChanged(nameof(AllowFlight)); }
         }
 
-        public bool AllowNether
+        public bool? AllowNether
         {
             get => _allowNether;
             set { _allowNether = value; OnPropertyChanged(nameof(AllowNether)); }
         }
 
-        public bool CommandBlocks
+        public bool? CommandBlocks
         {
             get => _commandBlocks;
             set { _commandBlocks = value; OnPropertyChanged(nameof(CommandBlocks)); }
@@ -54,25 +54,25 @@ namespace MinecraftServerTool.ViewModels
             set { _difficulty = value; OnPropertyChanged(nameof(Difficulty)); }
         }
 
-        public bool Hardcore
+        public bool? Hardcore
         {
             get => _hardcore;
             set { _hardcore = value; OnPropertyChanged(nameof(Hardcore)); }
         }
 
-        public bool Pvp
+        public bool? Pvp
         {
             get => _pvp;
             set { _pvp = value; OnPropertyChanged(nameof(Pvp)); }
         }
 
-        public int MaxPlayers
+        public int? MaxPlayers
         {
             get => _maxPlayers;
             set { _maxPlayers = value; OnPropertyChanged(nameof(MaxPlayers)); }
         }
 
-        public bool OnlineMode
+        public bool? OnlineMode
         {
             get => _onlineMode;
             set { _onlineMode = value; OnPropertyChanged(nameof(OnlineMode)); }
@@ -90,7 +90,7 @@ namespace MinecraftServerTool.ViewModels
             set { _levelName = value; OnPropertyChanged(nameof(LevelName)); }
         }
 
-        public int MaxWorldSize
+        public int? MaxWorldSize
         {
             get => _maxWorldSize;
             set { _maxWorldSize = value; OnPropertyChanged(nameof(MaxWorldSize)); }

@@ -32,43 +32,20 @@ namespace MinecraftServerTool.Services
 
         public static void LoadServerProperties(Dictionary<string, string> props,ServerPropertiesViewModel vm)
         {
-            if (props.TryGetValue("allow-flight", out var allowFlight))
-                vm.AllowFlight = allowFlight.Equals("true", StringComparison.OrdinalIgnoreCase);
-
-            if (props.TryGetValue("allow-nether", out var allowNether))
-                vm.AllowNether = allowNether.Equals("true", StringComparison.OrdinalIgnoreCase);
-
-            if (props.TryGetValue("enable-command-block", out var cmd))
-                vm.CommandBlocks = cmd.Equals("true", StringComparison.OrdinalIgnoreCase);
-
-            if (props.TryGetValue("difficulty", out var diff))
-                vm.Difficulty = diff;
-
-            if (props.TryGetValue("hardcore", out var hardcore))
-                vm.Hardcore = hardcore.Equals("true", StringComparison.OrdinalIgnoreCase);
-
-            if (props.TryGetValue("pvp", out var pvp))
-                vm.Pvp = pvp.Equals("true", StringComparison.OrdinalIgnoreCase);
-
-            if (props.TryGetValue("max-players", out var maxPlayers) &&
-                int.TryParse(maxPlayers, out var mp))
-                vm.MaxPlayers = mp;
-
-            if (props.TryGetValue("online-mode", out var onlineMode))
-                vm.OnlineMode = onlineMode.Equals("true", StringComparison.OrdinalIgnoreCase);
-
-            if (props.TryGetValue("network-compression-threshold", out var nct))
-                vm.NetworkCompression = nct;
-
-            if (props.TryGetValue("level-name", out var levelName))
-                vm.LevelName = levelName;
-
-            if (props.TryGetValue("max-world-size", out var mws) &&
-                int.TryParse(mws, out var mwsInt))
-                vm.MaxWorldSize = mwsInt;
-
-            if (props.TryGetValue("level-seed", out var seed))
-                vm.LevelSeed = seed;
+            vm.AllowFlight          = props.GetBoolOrNull("allow-flight");
+            vm.AllowNether          = props.GetBoolOrNull("allow-nether");
+            vm.CommandBlocks        = props.GetBoolOrNull("enable-command-block");
+            vm.Difficulty           = props.GetOrNull("difficulty");
+            vm.MaxPlayers           = props.GetIntOrNull("max-players");
+            vm.LevelSeed            = props.GetOrNull("level-seed");
+            vm.Hardcore             = props.GetBoolOrNull("hardcore");
+            vm.Pvp                  = props.GetBoolOrNull("pvp");
+            vm.MaxPlayers           = props.GetIntOrNull("max-players");
+            vm.OnlineMode           = props.GetBoolOrNull("online-mode");
+            vm.NetworkCompression   = props.GetOrNull("network-compression-treshold");
+            vm.LevelName            = props.GetOrNull("level-name");
+            vm.MaxWorldSize         = props.GetIntOrNull("max-world-size");
+            vm.LevelSeed            = props.GetOrNull("level-seed");
         }
 
         public static void SaveServerProperties(string modpackPath, ServerPropertiesViewModel viewModel)
@@ -101,4 +78,31 @@ namespace MinecraftServerTool.Services
         }
 
     }
+    // This whole class is dedicated purely to ensure the values extracted have a value
+    // or else returns a null. This makes it so the ServerPropertiesControl panel is
+    // compatible with all Minecraft versions -- should the earlier versions not have
+    // one of the fields requested and whatnot. Otherwise it would throw a KeyNotFoundException.
+    public static class DictionaryExtensions
+    {
+        // Why isn't string? (with a question mark) allowed?
+        public static string GetOrNull(this Dictionary<string, string> dict, string key)
+        {
+            return dict.TryGetValue(key, out var value) ? value : null;
+        }
+
+        public static bool? GetBoolOrNull(this Dictionary<string, string> dict, string key)
+        {
+            if (dict.TryGetValue(key, out var value))
+                return value.Equals("true", StringComparison.OrdinalIgnoreCase);
+            return null;
+        }
+
+        public static int? GetIntOrNull(this Dictionary<string, string> dict, string key)
+        {
+            if (dict.TryGetValue(key, out var value) && int.TryParse(value, out var number))
+                return number;
+            return null;
+        }
+    }
+
 }
