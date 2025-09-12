@@ -54,18 +54,18 @@ namespace MinecraftServerTool.Services
             var properties = ParseServerProperties(modpackPath);
 
             // Updates dictionary with ViewModel values
-            properties["allow-flight"] = viewModel.AllowFlight.ToString();
-            properties["allow-nether"] = viewModel.AllowNether.ToString();
-            properties["enable-command-block"] = viewModel.CommandBlocks.ToString();
-            properties["difficulty"] = viewModel.Difficulty;
-            properties["hardcore"] = viewModel.Hardcore.ToString();
-            properties["pvp"] = viewModel.Pvp.ToString();
-            properties["max-players"] = viewModel.MaxPlayers.ToString();
-            properties["online-mode"] = viewModel.OnlineMode.ToString();
-            properties["network-compression-treshold"] = viewModel.NetworkCompression.ToString();
-            properties["level-name"] = viewModel.LevelName.ToString();
-            properties["max-world-size"] = viewModel.MaxWorldSize.ToString();
-            properties["level-seed"] = viewModel.LevelSeed.ToString();
+            properties["allow-flight"]                  = viewModel.AllowFlight.ToString();
+            properties["allow-nether"]                  = viewModel.AllowNether.ToString();
+            properties["enable-command-block"]          = viewModel.CommandBlocks.ToString();
+            properties["difficulty"]                    = viewModel.Difficulty;
+            properties["hardcore"]                      = viewModel.Hardcore.ToString();
+            properties["pvp"]                           = viewModel.Pvp.ToString();
+            properties["max-players"]                   = viewModel.MaxPlayers.ToString();
+            properties["online-mode"]                   = viewModel.OnlineMode.ToString();
+            properties["network-compression-treshold"]  = viewModel.NetworkCompression.ToString();
+            properties["level-name"]                    = viewModel.LevelName.ToString();
+            properties["max-world-size"]                = viewModel.MaxWorldSize.ToString();
+            properties["level-seed"]                    = viewModel.LevelSeed.ToString();
 
             // Writes back to file
             using (var writer = new StreamWriter(filePath))
