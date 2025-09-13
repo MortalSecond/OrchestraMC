@@ -1,13 +1,23 @@
-﻿using System;
+﻿using MinecraftServerTool.Helpers;
+using MinecraftServerTool.Services;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Windows.Input;
 
 namespace MinecraftServerTool.ViewModels
 {
     public class ServerPropertiesViewModel : INotifyPropertyChanged
     {
+        // Internal variables for flow
         public event Action RestartRequired;
+        public event PropertyChangedEventHandler PropertyChanged;
         private bool _isLoading = false;
+        public ICommand SaveCommand { get; }
+
+        // External variables from viewmodels
+        public string ModpackPath { get; set; }
+
 
         // Actual server.properties fields
         private bool? _allowFlight;
@@ -23,8 +33,6 @@ namespace MinecraftServerTool.ViewModels
         private int? _maxWorldSize;
         private string _levelSeed;
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
         private void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
@@ -37,6 +45,14 @@ namespace MinecraftServerTool.ViewModels
         {
             get => _isLoading;
             set { _isLoading = value;}
+        }
+        public ServerPropertiesViewModel()
+        {
+            SaveCommand = new RelayCommand(_ => SaveProperties());
+        }
+        private void SaveProperties()
+        {
+            ServerPropertiesService.SaveServerProperties(ModpackPath, this);
         }
 
         public bool? AllowFlight

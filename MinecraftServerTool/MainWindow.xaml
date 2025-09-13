@@ -22,7 +22,8 @@
             <!-- Folder Selection -->
             <TextBlock Text="Modpack Folder:" FontWeight="Bold"/>
             <StackPanel Orientation="Horizontal">
-                <TextBox Name="txtModpackFolderPath" Width="400" TextChanged="txtModpackFolderPath_TextChanged"/>
+                <TextBox Width="400" Text="{Binding ModpackPath, UpdateSourceTrigger=PropertyChanged}"
+                         TextChanged="txtModpackFolderPath_TextChanged" Name="txtModpackFolderPath" />
                 <Button Name="btnBrowseModpackFolder" Content="Browse..." Click="btnBrowseFolder_Click"/>
             </StackPanel>
             
@@ -72,7 +73,8 @@
             </Grid.RowDefinitions>
 
             <!-- Server Properties Sidebar -->
-            <local:ServerPropertiesControl Grid.Column="1" Visibility="Collapsed" x:Name="spServerPropertiesPanel"/>
+            <local:ServerPropertiesControl DataContext="{Binding ServerProperties}"
+                Grid.Column="1" Visibility="Collapsed" x:Name="spServerPropertiesPanel"/>
 
             <!-- Java Arguments -->
             <Border Grid.Row="1" Background="LightCoral">

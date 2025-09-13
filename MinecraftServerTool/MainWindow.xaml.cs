@@ -19,16 +19,15 @@ namespace MinecraftServerTool
     public partial class MainWindow : Window
     {
         private readonly ServerPropertiesService serverPropertiesService;
-        private readonly ServerPropertiesViewModel serverPropertiesVM;
+        private readonly MainWindowViewModel mainVm;
         public MainWindow()
         {
             InitializeComponent();
+            mainVm = new MainWindowViewModel();
+            DataContext = mainVm;
 
-            serverPropertiesService = new ServerPropertiesService();
-            serverPropertiesVM = new ServerPropertiesViewModel();
-            spServerPropertiesPanel.DataContext = serverPropertiesVM;
-
-            serverPropertiesVM.RestartRequired += () =>
+            // Subscribe to RestartRequired
+            mainVm.ServerProperties.RestartRequired += () =>
             {
                 UpdateRestartButtonState("Restart Required", true);
             };
@@ -792,7 +791,7 @@ namespace MinecraftServerTool
             string modpackPath = txtModpackFolderPath.Text;
 
             if (btnRestartServer.Content.ToString() == "Restart Required")
-                ServerPropertiesService.SaveServerProperties(modpackPath, serverPropertiesVM);
+                ServerPropertiesService.SaveServerProperties(modpackPath, mainVm.ServerProperties);
 
             UpdateRestartButtonState("Saving...");
             KillServer();
@@ -852,7 +851,7 @@ namespace MinecraftServerTool
                 spServerPropertiesPanel.Visibility = Visibility.Visible;
 
                 var dict = ServerPropertiesService.ParseServerProperties(txtModpackFolderPath.Text);
-                ServerPropertiesService.LoadServerProperties(dict, serverPropertiesVM);
+                ServerPropertiesService.LoadServerProperties(dict, mainVm.ServerProperties);
             }
         }
 
