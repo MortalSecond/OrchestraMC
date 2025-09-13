@@ -21,6 +21,7 @@ namespace MinecraftServerTool
         public MainWindow()
         {
             InitializeComponent();
+
             mainVm = new MainWindowViewModel();
             DataContext = mainVm;
 
@@ -854,6 +855,7 @@ namespace MinecraftServerTool
 
                 // Makes all buttons and sidebars usable and visible
                 spServerPropertiesPanel.Visibility = Visibility.Visible;
+                spJavaArgumentsControl.Visibility = Visibility.Visible;
                 btnStartServer.IsEnabled = true;
                 btnRestartServer.IsEnabled = true;
 
@@ -865,6 +867,8 @@ namespace MinecraftServerTool
                 // Only enables the install forge, to telegraph to the user
                 // that they should install the Forge Server first
                 btnInstallForge.IsEnabled = true;
+                spServerPropertiesPanel.Visibility = Visibility.Collapsed;
+                spJavaArgumentsControl.Visibility = Visibility.Collapsed;
                 btnStartServer.IsEnabled = false;
                 btnRestartServer.IsEnabled = false;
             }

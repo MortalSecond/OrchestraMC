@@ -16,15 +16,18 @@ namespace MinecraftServerTool.ViewModels
                     OnPropertyChanged(nameof(ModpackPath));
 
                     ServerProperties.ModpackPath = value;
+                    JavaArguments.ModpackPath = value;
                 }
             }
         }
 
         public ServerPropertiesViewModel ServerProperties { get; }
+        public JavaArgumentsViewModel JavaArguments { get; }
 
         public MainWindowViewModel()
         {
             ServerProperties = new ServerPropertiesViewModel();
+            JavaArguments = new JavaArgumentsViewModel();
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

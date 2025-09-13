@@ -77,10 +77,8 @@
                 Grid.Column="1" Visibility="Collapsed" x:Name="spServerPropertiesPanel"/>
 
             <!-- Java Arguments -->
-            <Border Grid.Row="1" Background="LightCoral">
-                <TextBlock Text="Java Arguments" 
-                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </Border>
+            <local:JavaArgumentsControl DataContext="{Binding JavaArguments}"
+                Grid.Column="1" Grid.Row="1" Visibility="Collapsed" x:Name="spJavaArgumentsControl"/>
         </Grid>
     </Grid>
 </Window>
