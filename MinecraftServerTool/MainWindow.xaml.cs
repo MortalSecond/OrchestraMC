@@ -1,6 +1,5 @@
-﻿using MinecraftServerTool.Controls;
+﻿using MinecraftServerTool.Services;
 using MinecraftServerTool.ViewModels;
-using MinecraftServerTool.Services;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -18,7 +17,6 @@ namespace MinecraftServerTool
 {
     public partial class MainWindow : Window
     {
-        private readonly ServerPropertiesService serverPropertiesService;
         private readonly MainWindowViewModel mainVm;
         public MainWindow()
         {
@@ -29,7 +27,8 @@ namespace MinecraftServerTool
             // Subscribe to RestartRequired
             mainVm.ServerProperties.RestartRequired += () =>
             {
-                UpdateRestartButtonState("Restart Required", true);
+                if (btnStartServer.Content.ToString() == "Stop Server")
+                    UpdateRestartButtonState("Restart Required", true);
             };
         }
         // Initializes class for the commandline of the
