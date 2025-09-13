@@ -722,6 +722,11 @@ namespace MinecraftServerTool
             var mcVersions = await GetAvailableMcVersionsAsync();
             cbMinecraftVersion.ItemsSource = mcVersions.Reverse();
             cbMinecraftVersion.SelectedIndex = 0;
+
+            // Disables all buttons to prevent exceptions at startup
+            btnInstallForge.IsEnabled = false;
+            btnStartServer.IsEnabled = false;
+            btnRestartServer.IsEnabled = false;
         }
 
         private void btnBrowseFolder_Click(object sender, RoutedEventArgs e)
@@ -848,10 +853,21 @@ namespace MinecraftServerTool
                 rbCustom_Checked(sender, e);
                 cbCustomBuild.SelectedItem = forgeVersion;
 
+                // Makes all buttons and sidebars usable and visible
                 spServerPropertiesPanel.Visibility = Visibility.Visible;
+                btnStartServer.IsEnabled = true;
+                btnRestartServer.IsEnabled = true;
 
                 var dict = ServerPropertiesService.ParseServerProperties(txtModpackFolderPath.Text);
                 ServerPropertiesService.LoadServerProperties(dict, mainVm.ServerProperties);
+            }
+            if (isInstalled == false)
+            {
+                // Only enables the install forge, to telegraph to the user
+                // that they should install the Forge Server first
+                btnInstallForge.IsEnabled = true;
+                btnStartServer.IsEnabled = false;
+                btnRestartServer.IsEnabled = false;
             }
         }
 
