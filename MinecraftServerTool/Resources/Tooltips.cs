@@ -2,6 +2,23 @@
 {
     public static class Tooltips
     {
+        // Server hosting tooltips
+        public const string HostingMethod = "Ngrok: More stable and straightforward, but requires its own account. " +
+        "That account also requires credit card information for identification (even for the free tier). " +
+        "It has a 1 GB/month data cap, so it's not good for large servers but excellent for test servers " +
+        "or short sessions online. Recommended for quick test servers.\n\n" +
+
+        "Playit.gg: Streamlined and easy to use — no account needed. However, it runs through a proxy. " +
+        "If the Playit.gg servers go down (maintenance, downtime, etc.), your server will also be affected. " +
+        "Recommended for regular server use.\n\n" +
+
+        "Why tunneling? Use Ngrok or Playit.gg if you are behind CGNAT and cannot port forward.\n\n" +
+
+        "Port Forwarding: The most difficult but most reliable option. Unlike tunneling, Orchestra does not automate this. " +
+        "You must already have your router set to forward port 25565 to your machine. " +
+        "Recommended only if you know what you’re doing and you are not behind CGNAT.";
+
+        // Server.properties tooltips
         public const string AllowFlight = "Determines whether players moving at really high speeds is allowed, or if it causes the player to be kicked from the server. Note that some mods require this to be on due to fast movement, like Create: Protection Pixel's jetpacks.";
 
         public const string Difficulty = "Peaceful disables mobs and hunger, while health regens to all hearts. \nEasy makes mobs deal less damage, and you can't die from hunger or poison. \nNormal makes mobs deal their regular damage, and hunger depletes the health bar to half a heart. \nHard makes mobs deal extra damage and hunger can kill.";

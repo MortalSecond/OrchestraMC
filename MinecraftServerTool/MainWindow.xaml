@@ -4,6 +4,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:local="clr-namespace:MinecraftServerTool.Controls"
+        xmlns:resources="clr-namespace:MinecraftServerTool.Resources"
         mc:Ignorable="d"
         Title="OrchestraMC" Height="450" Width="800"
         Loaded="Window_Loaded">
@@ -45,7 +46,10 @@
             </StackPanel>
 
             <!-- Hosting Selection -->
-            <TextBlock Text="Hosting Method:" FontWeight="Bold" Margin="10 20 0 10"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Hosting Method:" FontWeight="Bold" Margin="10 20 0 10"/>
+                <local:TooltipButton TooltipText="{x:Static resources:Tooltips.HostingMethod}" Margin="5,0,0,0"/>
+            </StackPanel>
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="rbPlayit" Content="Playit.gg" Margin="20 0 0 0"/>
                 <RadioButton x:Name="rbNgrok" Content="Ngrok" Margin="10 0 0 0"/>
