@@ -40,7 +40,7 @@ namespace MinecraftServerTool.ViewModels
 
         private void SaveArguments()
         {
-            javaService.SaveJvmArgs(ModpackPath, AllocatedRam);
+            JavaArgumentsService.SaveJvmArgs(ModpackPath, AllocatedRam);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;

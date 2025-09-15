@@ -17,10 +17,13 @@ namespace MinecraftServerTool
 {
     public partial class MainWindow : Window
     {
+        // Initializes classes for internal flow
         private readonly MainWindowViewModel mainVm;
+        private readonly HttpClient _httpClient;
         public MainWindow()
         {
             InitializeComponent();
+            _httpClient = new HttpClient();
 
             mainVm = new MainWindowViewModel();
             DataContext = mainVm;
@@ -58,7 +61,7 @@ namespace MinecraftServerTool
         }
 
         // Helper method to ensure there's text in the first two inputs
-        private bool ValidateInputs(string folderPath, string mcVersion)
+        private static bool ValidateInputs(string folderPath, string mcVersion)
         {
             if (string.IsNullOrEmpty(mcVersion))
             {
@@ -136,28 +139,41 @@ namespace MinecraftServerTool
 
             return (mcVersion, forgeVersion);
         }
+        // Helper HttpClient for the download of files
+        private async Task DownloadFileAsync(string downloadURL, string savePath)
+        {
+            try
+            {
+                using var response = await _httpClient.GetAsync(downloadURL, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
+
+                await using var fs = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None);
+                await response.Content.CopyToAsync(fs);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error downloading file: {ex.Message}");
+            }
+        }
         // Fetches the latest and stable versions of Forge
         private async Task<(string latestStable, string latestExperimental)> GetLatestAvailableForgeVersionsAsync(string mcVersion)
         {
             string url = "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json";
 
-            using (var client = new WebClient())
+            try
             {
-                try
-                {
-                    string json = await client.DownloadStringTaskAsync(url);
-                    var data = JsonConvert.DeserializeObject<ForgePromotions>(json);
+                string json = await _httpClient.GetStringAsync(url);
+                var data = JsonConvert.DeserializeObject<ForgePromotions>(json);
 
-                    data.promos.TryGetValue($"{mcVersion}-recommended", out string stable);
-                    data.promos.TryGetValue($"{mcVersion}-latest", out string experimental);
+                data.promos.TryGetValue($"{mcVersion}-recommended", out string stable);
+                data.promos.TryGetValue($"{mcVersion}-latest", out string experimental);
 
-                    return (stable, experimental);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error fetching Forge promotions: " + ex.Message);
-                    return (null, null);
-                }
+                return (stable, experimental);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Error fetching Forge promotions: " + ex.Message);
+                return (null, null);
             }
         }
         private async Task<List<string>> GetAllAvailableForgeVersionsAsync()
@@ -167,30 +183,27 @@ namespace MinecraftServerTool
             try
             {
                 string url = "https://files.minecraftforge.net/net/minecraftforge/forge/maven-metadata.json";
-                using (var client = new WebClient())
+
+                string json = await _httpClient.GetStringAsync(url);
+                var metadata = JsonConvert.DeserializeObject<ForgeMetadata>(json);
+
+                if (metadata.TryGetValue(selectedMcVersion, out List<string> value))
                 {
-                    string json = await client.DownloadStringTaskAsync(url);
-                    var metadata = JsonConvert.DeserializeObject<ForgeMetadata>(json);
+                    var forgeVersions = value.Select(v => v.Contains('-') ? v.Split('-')[1] : v) // Takes only the Forge build
+                    .ToList();
 
-                    if (metadata.ContainsKey(selectedMcVersion))
+                    // Appends " (Latest Build)" to the last item
+                    if (forgeVersions.Count > 0)
                     {
-                        var forgeVersions = metadata[selectedMcVersion]
-                        .Select(v => v.Contains("-") ? v.Split('-')[1] : v) // Takes only the Forge build
-                        .ToList();
-
-                        // Appends " (Latest Build)" to the last item
-                        if (forgeVersions.Count > 0)
-                        {
-                            int lastIndex = forgeVersions.Count - 1;
-                            forgeVersions[lastIndex] = forgeVersions[lastIndex] + " (Latest Build)";
-                        }
-
-                        return forgeVersions;
+                        int lastIndex = forgeVersions.Count - 1;
+                        forgeVersions[lastIndex] = forgeVersions[lastIndex] + " (Latest Build)";
                     }
-                    else
-                    {
-                        return null;
-                    }
+
+                    return forgeVersions;
+                }
+                else
+                {
+                    return null;
                 }
             }
             catch (Exception ex)
@@ -203,21 +216,19 @@ namespace MinecraftServerTool
         {
             // Preload Minecraft versions from promotions.json
             string url = "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json";
-            using (var client = new WebClient())
+
+            string json = await _httpClient.GetStringAsync(url);
+            var data = JsonConvert.DeserializeObject<ForgePromotions>(json);
+
+            // Extracts the unique MC versions from the keys
+            var mcVersions = new HashSet<string>();
+            foreach (var key in data.promos.Keys)
             {
-                string json = await client.DownloadStringTaskAsync(url);
-                var data = JsonConvert.DeserializeObject<ForgePromotions>(json);
-
-                // Extracts the unique MC versions from the keys
-                var mcVersions = new HashSet<string>();
-                foreach (var key in data.promos.Keys)
-                {
-                    var mcVer = key.Split('-')[0]; // Parses it into something like "1.20.1"
-                    mcVersions.Add(mcVer);
-                }
-
-                return mcVersions;
+                var mcVer = key.Split('-')[0]; // Parses it into something like "1.20.1"
+                mcVersions.Add(mcVer);
             }
+
+            return mcVersions;
         }
         private async Task PopulateCustomForgeBuildCombobox()
         {
@@ -243,7 +254,7 @@ namespace MinecraftServerTool
                 }
                 else
                 {
-                    var (mcVersion, forgeVersion) = GetInstalledVersion();
+                    var (_, forgeVersion) = GetInstalledVersion();
                     cbCustomBuild.ItemsSource = forgeVersions;
                     cbCustomBuild.SelectedItem = forgeVersion;
                 }
@@ -252,21 +263,18 @@ namespace MinecraftServerTool
         // Fetches the public URL from Ngrok's API
         private async Task<string> GetNgrokAddressAsync()
         {
-            using (HttpClient client = new HttpClient())
-            {
-                string response = await client.GetStringAsync("http://127.0.0.1:4040/api/tunnels");
-                dynamic json = Newtonsoft.Json.JsonConvert.DeserializeObject(response);
+            string response = await _httpClient.GetStringAsync("http://127.0.0.1:4040/api/tunnels");
+            dynamic json = Newtonsoft.Json.JsonConvert.DeserializeObject(response);
 
-                // Get the first TCP tunnel
-                foreach (var tunnel in json.tunnels)
+            // Get the first TCP tunnel
+            foreach (var tunnel in json.tunnels)
+            {
+                if ((string)tunnel.proto == "tcp")
                 {
-                    if ((string)tunnel.proto == "tcp")
-                    {
-                        // The output has a prefix that messes with the usable URL,
-                        // so it has to be trimmed to be properly usable
-                        string forwarding = tunnel.public_url;
-                        return forwarding.Replace("tcp://", "");
-                    }
+                    // The output has a prefix that messes with the usable URL,
+                    // so it has to be trimmed to be properly usable
+                    string forwarding = tunnel.public_url;
+                    return forwarding.Replace("tcp://", "");
                 }
             }
             return null;
@@ -293,10 +301,7 @@ namespace MinecraftServerTool
 
             // Downloads Ngrok
             string downloadURL = "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip";
-            using (var client = new WebClient())
-            {
-                await client.DownloadFileTaskAsync(new Uri(downloadURL), ngrokZipPath);
-            }
+            await DownloadFileAsync(downloadURL, ngrokZipPath);
 
             // Extracts the ngrok.exe into binaries folder
             string ngrokExePath = Path.Combine(binariesPath, "ngrok.exe");
@@ -315,7 +320,7 @@ namespace MinecraftServerTool
             // Deletes the ZIP to keep things clean
             File.Delete(ngrokZipPath);
         }
-        private void InstallNgrok(string modpackFolder, string ngrokBinariesPath)
+        private static void InstallNgrok(string modpackFolder, string ngrokBinariesPath)
         {
             // Copies ngrok.exe into modpack folder
             string targetPath = Path.Combine(modpackFolder, "ngrok.exe");
@@ -402,7 +407,7 @@ namespace MinecraftServerTool
 
                     if (inTunnelsSection && line.Contains("=>"))
                     {
-                        var parts = line.Split(new[] { "=>" }, StringSplitOptions.None);
+                        var parts = line.Split(["=>"], StringSplitOptions.None);
                         if (parts.Length > 0)
                         {
                             return parts[0].Trim();
@@ -415,13 +420,11 @@ namespace MinecraftServerTool
         }
         private async Task DownloadPlayitAsync(string playitBinariesPath)
         {
-            string downloadUrl = "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe";
-            using (var client = new WebClient())
-            {
-                await client.DownloadFileTaskAsync(new Uri(downloadUrl), playitBinariesPath);
-            }
+            string downloadURL = "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe";
+
+            await DownloadFileAsync(downloadURL, playitBinariesPath);
         }
-        private void InstallPlayit(string modpackPath, string playitBinariesPath)
+        private static void InstallPlayit(string modpackPath, string playitBinariesPath)
         {
             // Copies ngrok.exe into modpack folder
             string targetPath = Path.Combine(modpackPath, "playit.exe");
@@ -469,14 +472,11 @@ namespace MinecraftServerTool
         {
             string savePath = Path.Combine(folderPath, $"forge-{forgeVersion}-installer.jar");
             string versionString = $"{mcVersion}-{forgeVersion}";
-            string downloadUrl = $"https://maven.minecraftforge.net/net/minecraftforge/forge/{versionString}/forge-{versionString}-installer.jar";
+            string downloadURL= $"https://maven.minecraftforge.net/net/minecraftforge/forge/{versionString}/forge-{versionString}-installer.jar";
 
-            using (var client = new WebClient())
-            {
-                await client.DownloadFileTaskAsync(new Uri(downloadUrl), savePath);
-            }
+            await DownloadFileAsync(downloadURL, savePath);
         }
-        private void InstallForgeServer(string forgeInstallerPath, string targetDirectory)
+        private static void InstallForgeServer(string forgeInstallerPath, string targetDirectory)
         {
             var process = new Process
             {
@@ -529,25 +529,22 @@ namespace MinecraftServerTool
 
             // Gets the public IP from IPify.org and attaches the
             // default Minecraft server host Port (25565)
-            using (var client = new WebClient())
+            string publicIp = await _httpClient.GetStringAsync("https://api.ipify.org");
+            if (!string.IsNullOrWhiteSpace(publicIp))
             {
-                string publicIp = await client.DownloadStringTaskAsync("https://api.ipify.org");
-                if (!string.IsNullOrWhiteSpace(publicIp))
-                {
-                    string serverAddress = $"{publicIp.Trim()}:25565";
-                    UpdateServerAddressText(serverAddress);
-                }
-                else
-                {
-                    MessageBox.Show("Could not fetch your public IP. Please check your internet connection.");
-                }
+                string serverAddress = $"{publicIp.Trim()}:25565";
+                UpdateServerAddressText(serverAddress);
+            }
+            else
+            {
+                MessageBox.Show("Could not fetch your public IP. Please check your internet connection.");
             }
         }
 
         // Method to run the run.bat
         // This is called twice per new installation;
         // Once to generate the files, another to actually start the server
-        private void RunServerOnce(string serverDirectory)
+        private static void RunServerOnce(string serverDirectory)
         {
             var psi = new ProcessStartInfo
             {
@@ -560,21 +557,19 @@ namespace MinecraftServerTool
                 CreateNoWindow = true
             };
 
-            using (var process = Process.Start(psi))
+            using var process = Process.Start(psi);
+            if (process != null)
             {
-                if (process != null)
+                // Give the server 10 secs to generate eula.txt
+                process.WaitForExit(10000);
+                if (!process.HasExited)
                 {
-                    // Give the server 10 secs to generate eula.txt
-                    process.WaitForExit(10000);
-                    if (!process.HasExited)
-                    {
-                        process.Kill();
-                    }
+                    process.Kill();
                 }
             }
         }
         // Changes the eula.txt to set it to "true"
-        private void AcceptEula(string serverDirectory)
+        private static void AcceptEula(string serverDirectory)
         {
             string eulaPath = Path.Combine(serverDirectory, "eula.txt");
             if (File.Exists(eulaPath))
@@ -727,6 +722,10 @@ namespace MinecraftServerTool
             btnInstallForge.IsEnabled = false;
             btnStartServer.IsEnabled = false;
             btnRestartServer.IsEnabled = false;
+
+            // Auto-selects host and Forge version to prevent any exception errors.
+            rbStable.IsChecked = true;
+            rbPlayit.IsChecked = true;
         }
 
         private void btnBrowseFolder_Click(object sender, RoutedEventArgs e)

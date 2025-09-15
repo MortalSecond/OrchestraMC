@@ -72,12 +72,10 @@ namespace MinecraftServerTool.Services
             properties["level-seed"]                    = viewModel.LevelSeed.ToString();
 
             // Writes back to file
-            using (var writer = new StreamWriter(filePath))
+            using var writer = new StreamWriter(filePath);
+            foreach (var kvp in properties)
             {
-                foreach (var kvp in properties)
-                {
-                    writer.WriteLine($"{kvp.Key}={kvp.Value}");
-                }
+                writer.WriteLine($"{kvp.Key}={kvp.Value}");
             }
         }
 

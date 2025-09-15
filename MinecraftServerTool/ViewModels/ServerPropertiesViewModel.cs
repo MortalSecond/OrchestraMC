@@ -129,12 +129,12 @@ namespace MinecraftServerTool.ViewModels
 
         // Collections for ComboBoxes
         public ObservableCollection<string> Booleans { get; } =
-            new ObservableCollection<string> { "Enabled", "Disabled" };
+            ["Enabled", "Disabled"];
 
         public ObservableCollection<string> Difficulties { get; } =
-            new ObservableCollection<string> { "Peaceful", "Easy", "Normal", "Hard" };
+            ["Peaceful", "Easy", "Normal", "Hard"];
 
         public ObservableCollection<string> CompressionOptions { get; } =
-            new ObservableCollection<string> { "Everything", "64", "128", "256", "512", "Disabled" };
+            ["Everything", "64", "128", "256", "512", "Disabled"];
     }
 }
