@@ -254,9 +254,13 @@ namespace MinecraftServerTool
                 }
                 else
                 {
-                    var (_, forgeVersion) = GetInstalledVersion();
-                    cbCustomBuild.ItemsSource = forgeVersions;
-                    cbCustomBuild.SelectedItem = forgeVersion;
+                    bool isInstalled = ValidateServerInstallation(txtModpackFolderPath.Text);
+                    if (isInstalled)
+                    {
+                        var (_, forgeVersion) = GetInstalledVersion();
+                        cbCustomBuild.ItemsSource = forgeVersions;
+                        cbCustomBuild.SelectedItem = forgeVersion;
+                    }
                 }
             }
         }
