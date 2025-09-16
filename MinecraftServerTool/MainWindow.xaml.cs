@@ -40,6 +40,7 @@ namespace MinecraftServerTool
         private Process minecraftServerProcess;
         private Process ngrokProcess;
         private Process playitProcess;
+        private TaskCompletionSource<string> _tunnelAddressTcs;
         // Initializing class for the Maven Metadata JSON
         // JSON Structure:
         //  "1.1": [
@@ -281,19 +282,42 @@ namespace MinecraftServerTool
         }
         private void StartNgrok(string modpackPath)
         {
-            var psi = new ProcessStartInfo
+            ngrokProcess = new Process
             {
-                FileName = Path.Combine(modpackPath, "ngrok.exe"),
-                Arguments = "tcp 25565",
-                WorkingDirectory = modpackPath,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = Path.Combine(modpackPath, "ngrok.exe"),
+                    Arguments = "tcp 25565",
+                    WorkingDirectory = modpackPath,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
             };
 
-            ngrokProcess = new Process { StartInfo = psi };
+            // Subscribe to output
+            ngrokProcess.OutputDataReceived += (sender, e) =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    txtDebugOutput.AppendText(e.Data + Environment.NewLine);
+                    txtDebugOutput.ScrollToEnd();
+                });
+            };
+
+            ngrokProcess.ErrorDataReceived += (sender, e) =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    txtDebugOutput.AppendText("[ERROR] " + e.Data + Environment.NewLine);
+                    txtDebugOutput.ScrollToEnd();
+                });
+            };
+
             ngrokProcess.Start();
+            ngrokProcess.BeginOutputReadLine();
+            ngrokProcess.BeginErrorReadLine();
         }
         private async Task DownloadNgrokAsync(string binariesPath)
         {
@@ -372,51 +396,67 @@ namespace MinecraftServerTool
         // provide the server address string for sanity's sake
         private async Task<string> StartPlayit(string playitModpackPath, string modpackPath)
         {
-            var psi = new ProcessStartInfo
+            _tunnelAddressTcs = new TaskCompletionSource<string>();
+
+            playitProcess = new Process
             {
-                FileName = playitModpackPath,
-                WorkingDirectory = modpackPath,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = playitModpackPath,
+                    WorkingDirectory = modpackPath,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                }
             };
 
-            playitProcess = new Process { StartInfo = psi };
+            bool inTunnelsSection = false;
 
-            using (playitProcess)
+            // Subscribe to output
+            playitProcess.OutputDataReceived += (sender, e) =>
             {
-                // Starts the Playit tunnel and gives 15 seconds of buffer
-                playitProcess = new Process { StartInfo = psi };
-                playitProcess.Start();
-                await Task.Delay(15000);
-
-                string line;
-                bool inTunnelsSection = false;
-
-                // Since Playit.gg provides a very barebones cmd.exe output, this
-                // attempts to extract the public address. It comes after "TUNNELS"
-                // and before a "=> 127.x.x.x:xxxx" -- so it finds it and splits it
-                while ((line = await playitProcess.StandardOutput.ReadLineAsync()) != null)
+                if (!string.IsNullOrEmpty(e.Data))
                 {
-                    if (line.Trim().Equals("TUNNELS", StringComparison.OrdinalIgnoreCase))
+                    Dispatcher.Invoke(() =>
+                    {
+                        txtDebugOutput.AppendText(e.Data + Environment.NewLine);
+                        txtDebugOutput.ScrollToEnd();
+                    });
+
+                    if (e.Data.Trim().Equals("TUNNELS", StringComparison.OrdinalIgnoreCase))
                     {
                         inTunnelsSection = true;
-                        continue;
                     }
-
-                    if (inTunnelsSection && line.Contains("=>"))
+                    else if (inTunnelsSection && e.Data.Contains("=>"))
                     {
-                        var parts = line.Split(["=>"], StringSplitOptions.None);
+                        var parts = e.Data.Split(["=>"], StringSplitOptions.None);
                         if (parts.Length > 0)
                         {
-                            return parts[0].Trim();
+                            _tunnelAddressTcs.TrySetResult(parts[0].Trim());
                         }
                     }
                 }
-            }
+            };
 
-            return null;
+            playitProcess.ErrorDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        txtDebugOutput.AppendText("[ERROR] " + e.Data + Environment.NewLine);
+                        txtDebugOutput.ScrollToEnd();
+                    });
+                }
+            };
+
+            // Starts the Playit tunnel and gives 15 seconds of buffer
+            playitProcess.Start();
+            playitProcess.BeginOutputReadLine();
+            playitProcess.BeginErrorReadLine();
+            var completedTask = await Task.WhenAny(_tunnelAddressTcs.Task, Task.Delay(15000));
+            return completedTask == _tunnelAddressTcs.Task ? await _tunnelAddressTcs.Task : null;
         }
         private async Task DownloadPlayitAsync(string playitBinariesPath)
         {
@@ -476,7 +516,7 @@ namespace MinecraftServerTool
 
             await DownloadFileAsync(downloadURL, savePath);
         }
-        private static void InstallForgeServer(string forgeInstallerPath, string targetDirectory)
+        private void InstallForgeServer(string forgeInstallerPath, string targetDirectory)
         {
             var process = new Process
             {
@@ -492,8 +532,30 @@ namespace MinecraftServerTool
                 }
             };
 
-            process.OutputDataReceived += (sender, e) => { if (!string.IsNullOrEmpty(e.Data)) Console.WriteLine(e.Data); };
-            process.ErrorDataReceived += (sender, e) => { if (!string.IsNullOrEmpty(e.Data)) Console.WriteLine("ERR: " + e.Data); };
+            // Subscribe to output
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        txtDebugOutput.AppendText(e.Data + Environment.NewLine);
+                        txtDebugOutput.ScrollToEnd();
+                    });
+                }
+            };
+
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        txtDebugOutput.AppendText("[ERROR] " + e.Data + Environment.NewLine);
+                        txtDebugOutput.ScrollToEnd();
+                    });
+                }
+            };
 
             process.Start();
             process.BeginOutputReadLine();
@@ -544,20 +606,50 @@ namespace MinecraftServerTool
         // Method to run the run.bat
         // This is called twice per new installation;
         // Once to generate the files, another to actually start the server
-        private static void RunServerOnce(string serverDirectory)
+        private void RunServerOnce(string serverDirectory)
         {
-            var psi = new ProcessStartInfo
+            var process = new Process
             {
-                FileName = "cmd.exe",
-                Arguments = "/C run.bat",
-                WorkingDirectory = serverDirectory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = "cmd.exe",
+                    Arguments = "/C run.bat",
+                    WorkingDirectory = serverDirectory,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                }
             };
 
-            using var process = Process.Start(psi);
+            // Subscribe to output
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        txtDebugOutput.AppendText(e.Data + Environment.NewLine);
+                        txtDebugOutput.ScrollToEnd();
+                    });
+                }
+            };
+
+            process.ErrorDataReceived += (sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        txtDebugOutput.AppendText("[ERROR] " + e.Data + Environment.NewLine);
+                        txtDebugOutput.ScrollToEnd();
+                    });
+                }
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
             if (process != null)
             {
                 // Give the server 10 secs to generate eula.txt
@@ -781,6 +873,7 @@ namespace MinecraftServerTool
                     break;
                 case "Stop Host":
                     StopHosts(selectedHost);
+                    UpdateServerAddressText("N/A");
                     break;
                 case "Start Host":
                     await BeginHostsAsync(selectedHost, binariesFolder, modpackPath);
@@ -816,7 +909,10 @@ namespace MinecraftServerTool
             if (cbMinecraftVersion.SelectedItem == null)
                 return;
 
-            await PopulateCustomForgeBuildCombobox();
+            bool isInstalled = ValidateServerInstallation(txtModpackFolderPath.Text.ToString());
+
+            if (isInstalled)
+                await PopulateCustomForgeBuildCombobox();
         }
 
         // Enables or disables the custom Forge build combobox

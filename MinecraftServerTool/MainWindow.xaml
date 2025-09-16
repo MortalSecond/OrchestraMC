@@ -67,6 +67,17 @@
             <TextBlock Text="Server Address:" FontWeight="Bold" Margin="10 20 0 0"/>
             <Button x:Name="btnServerAddress" Content="N/A" Click="btnServerAddress_Click"
                     Width="100" HorizontalAlignment="Left" Margin="20 0 0 0"/>
+            
+            <!-- Debug output log -->
+            <TextBox x:Name="txtDebugOutput"
+             Background="Black"
+             Foreground="LightGreen"
+             FontFamily="Consolas"
+             FontSize="12"
+             IsReadOnly="True"
+             TextWrapping="Wrap"
+             VerticalScrollBarVisibility="Auto"
+             HorizontalScrollBarVisibility="Auto"/>
         </StackPanel>
 
         <!-- RIGHT COLUMN: Sidebars -->
