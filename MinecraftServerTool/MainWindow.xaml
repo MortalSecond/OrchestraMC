@@ -69,15 +69,16 @@
                     Width="100" HorizontalAlignment="Left" Margin="20 0 0 0"/>
             
             <!-- Debug output log -->
-            <TextBox x:Name="txtDebugOutput"
-             Background="Black"
-             Foreground="LightGreen"
-             FontFamily="Consolas"
-             FontSize="12"
-             IsReadOnly="True"
-             TextWrapping="Wrap"
-             VerticalScrollBarVisibility="Auto"
-             HorizontalScrollBarVisibility="Auto"/>
+            <TextBox Margin="10 10 0 0" Height="90"
+                     x:Name="txtDebugOutput"
+                     Background="Black"
+                     Foreground="LightGreen"
+                     FontFamily="Consolas"
+                     FontSize="12"
+                     IsReadOnly="True"
+                     TextWrapping="WrapWithOverflow"
+                     VerticalScrollBarVisibility="Visible"
+                     HorizontalScrollBarVisibility="Auto"/>
         </StackPanel>
 
         <!-- RIGHT COLUMN: Sidebars -->

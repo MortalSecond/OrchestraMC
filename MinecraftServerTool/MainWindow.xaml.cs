@@ -255,9 +255,15 @@ namespace MinecraftServerTool
                 }
                 else
                 {
-                    var (_, forgeVersion) = GetInstalledVersion();
                     cbCustomBuild.ItemsSource = forgeVersions;
-                    cbCustomBuild.SelectedItem = forgeVersion;
+                    cbCustomBuild.SelectedIndex = 0;
+
+                    bool isInstalled = ValidateServerInstallation(txtModpackFolderPath.Text);
+                    if (isInstalled)
+                    {
+                        var (_, forgeVersion) = GetInstalledVersion();
+                        cbCustomBuild.SelectedItem = forgeVersion;
+                    }
                 }
             }
         }
@@ -573,17 +579,14 @@ namespace MinecraftServerTool
 
             // Does some run.bat shenanigans to properly set up the server files
             UpdateInstallButtonState("Generating Files...");
-            await Task.Run(() =>
-            {
-                // Step 1: Run once to generate eula.txt
-                RunServerOnce(modpackPath);
-                UpdateInstallButtonState("Accepting EULA...");
-                // Step 2: Change the EULA's text file to true
-                AcceptEula(modpackPath);
-                UpdateInstallButtonState("Processing...");
-                // Step 3: Run once more to generate the rest of the files
-                RunServerOnce(modpackPath);
-            });
+            // Step 1: Run once to generate eula.txt
+            RunServerOnce(modpackPath);
+            UpdateInstallButtonState("Accepting EULA...");
+            // Step 2: Change the EULA's text file to true
+            AcceptEula(modpackPath);
+            UpdateInstallButtonState("Processing...");
+            // Step 3: Run once more to generate the rest of the files
+            RunServerOnce(modpackPath);
         }
         private async Task PreparePortForwardAsync()
         {
@@ -855,6 +858,8 @@ namespace MinecraftServerTool
             finally
             {
                 UpdateInstallButtonState("✔ Installed");
+                UpdateServerButtonState("Stop Host", true);
+                UpdateRestartButtonState("Restart Server", true);
             }
         }
         
@@ -909,10 +914,7 @@ namespace MinecraftServerTool
             if (cbMinecraftVersion.SelectedItem == null)
                 return;
 
-            bool isInstalled = ValidateServerInstallation(txtModpackFolderPath.Text.ToString());
-
-            if (isInstalled)
-                await PopulateCustomForgeBuildCombobox();
+            await PopulateCustomForgeBuildCombobox();
         }
 
         // Enables or disables the custom Forge build combobox
