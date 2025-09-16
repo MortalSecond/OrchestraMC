@@ -44,7 +44,7 @@ namespace MinecraftServerTool.Services
             vm.Pvp                  = props.GetBoolOrNull("pvp");
             vm.MaxPlayers           = props.GetIntOrNull("max-players");
             vm.OnlineMode           = props.GetBoolOrNull("online-mode");
-            vm.NetworkCompression   = props.GetOrNull("network-compression-treshold");
+            vm.NetworkCompression   = props.GetOrNull("network-compression-threshold");
             vm.LevelName            = props.GetOrNull("level-name");
             vm.MaxWorldSize         = props.GetIntOrNull("max-world-size");
             vm.LevelSeed            = props.GetOrNull("level-seed");
@@ -66,7 +66,7 @@ namespace MinecraftServerTool.Services
             properties["pvp"]                           = viewModel.Pvp.ToString();
             properties["max-players"]                   = viewModel.MaxPlayers.ToString();
             properties["online-mode"]                   = viewModel.OnlineMode.ToString();
-            properties["network-compression-treshold"]  = viewModel.NetworkCompression.ToString();
+            properties["network-compression-threshold"] = viewModel.NetworkCompression.ToString();
             properties["level-name"]                    = viewModel.LevelName.ToString();
             properties["max-world-size"]                = viewModel.MaxWorldSize.ToString();
             properties["level-seed"]                    = viewModel.LevelSeed.ToString();
