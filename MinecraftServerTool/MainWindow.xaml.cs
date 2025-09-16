@@ -254,11 +254,13 @@ namespace MinecraftServerTool
                 }
                 else
                 {
+                    cbCustomBuild.ItemsSource = forgeVersions;
+                    cbCustomBuild.SelectedIndex = 0;
+
                     bool isInstalled = ValidateServerInstallation(txtModpackFolderPath.Text);
                     if (isInstalled)
                     {
                         var (_, forgeVersion) = GetInstalledVersion();
-                        cbCustomBuild.ItemsSource = forgeVersions;
                         cbCustomBuild.SelectedItem = forgeVersion;
                     }
                 }
@@ -515,17 +517,14 @@ namespace MinecraftServerTool
 
             // Does some run.bat shenanigans to properly set up the server files
             UpdateInstallButtonState("Generating Files...");
-            await Task.Run(() =>
-            {
-                // Step 1: Run once to generate eula.txt
-                RunServerOnce(modpackPath);
-                UpdateInstallButtonState("Accepting EULA...");
-                // Step 2: Change the EULA's text file to true
-                AcceptEula(modpackPath);
-                UpdateInstallButtonState("Processing...");
-                // Step 3: Run once more to generate the rest of the files
-                RunServerOnce(modpackPath);
-            });
+            // Step 1: Run once to generate eula.txt
+            RunServerOnce(modpackPath);
+            UpdateInstallButtonState("Accepting EULA...");
+            // Step 2: Change the EULA's text file to true
+            AcceptEula(modpackPath);
+            UpdateInstallButtonState("Processing...");
+            // Step 3: Run once more to generate the rest of the files
+            RunServerOnce(modpackPath);
         }
         private async Task PreparePortForwardAsync()
         {
@@ -767,6 +766,8 @@ namespace MinecraftServerTool
             finally
             {
                 UpdateInstallButtonState("✔ Installed");
+                UpdateServerButtonState("Stop Host", true);
+                UpdateRestartButtonState("Restart Server", true);
             }
         }
         
