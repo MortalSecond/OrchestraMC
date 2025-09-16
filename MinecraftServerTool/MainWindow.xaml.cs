@@ -816,10 +816,7 @@ namespace MinecraftServerTool
             if (cbMinecraftVersion.SelectedItem == null)
                 return;
 
-            bool isInstalled = ValidateServerInstallation(txtModpackFolderPath.Text.ToString());
-
-            if (isInstalled)
-                await PopulateCustomForgeBuildCombobox();
+            await PopulateCustomForgeBuildCombobox();
         }
 
         // Enables or disables the custom Forge build combobox
