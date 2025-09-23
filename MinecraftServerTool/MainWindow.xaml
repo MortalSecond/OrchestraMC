@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:MinecraftServerTool.Controls"
         xmlns:resources="clr-namespace:MinecraftServerTool.Resources"
         mc:Ignorable="d"
-        Title="OrchestraMC" Height="450" Width="800"
+        Title="OrchestraMC" Height="500" Width="800"
         Loaded="Window_Loaded">
 
     <Grid>
@@ -19,67 +19,103 @@
         </Grid.ColumnDefinitions>
 
         <!-- LEFT COLUMN: Main Server Menu -->
-        <StackPanel Grid.Column="0" Margin="20">
-            <!-- Folder Selection -->
-            <TextBlock Text="Modpack Folder:" FontWeight="Bold"/>
-            <StackPanel Orientation="Horizontal">
-                <TextBox Width="400" Text="{Binding ModpackPath, UpdateSourceTrigger=PropertyChanged}"
-                         TextChanged="txtModpackFolderPath_TextChanged" Name="txtModpackFolderPath" />
-                <Button Name="btnBrowseModpackFolder" Content="Browse..." Click="btnBrowseFolder_Click"/>
-            </StackPanel>
-            
-            <!-- Minecraft Version Selection -->
-            <TextBlock Text="Minecraft Version:" FontWeight="Bold"/>
-            <ComboBox x:Name="cbMinecraftVersion" Width="150" HorizontalAlignment="Left" 
-                      SelectionChanged="cbMinecraftVersion_SelectionChanged"/>
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="1.5*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
 
-            <!-- Forge Version Selection -->
-            <TextBlock Text="Forge Version:" FontWeight="Bold" Margin="10 20 0 10"/>
-            <StackPanel Orientation="Horizontal">
-                <RadioButton x:Name="rbStable" Content="Latest Stable" Margin="20 0 0 0" 
-                             Checked="rbStable_Checked"/>
-                <RadioButton x:Name="rbExperimental" Content="Latest Experimental" Margin="10 0 0 0" 
-                             Checked="rbExperimental_Checked"/>
-                <RadioButton x:Name="rbCustom" Content="Custom Version" Margin="10 0 10 0" 
-                             Checked="rbCustom_Checked"/>
-                <ComboBox x:Name="cbCustomBuild" Width="150" Visibility="Collapsed"/>
+            <!-- Row 0: Inputs -->
+            <StackPanel Grid.Row="0" Margin="10" Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <!-- Folder Location -->
+                <TextBlock Text="Modpack Folder:" FontWeight="Bold" HorizontalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0 0 0 10">
+                    <TextBox Width="400" Text="{Binding ModpackPath, UpdateSourceTrigger=PropertyChanged}"
+                    TextChanged="txtModpackFolderPath_TextChanged" Name="txtModpackFolderPath" />
+                    <Button Name="btnBrowseModpackFolder" Content="Browse..." Click="btnBrowseFolder_Click"/>
+                </StackPanel>
+
+                <!-- Selectors -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <!-- Forge Version Selection -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="tbCustomBuild" Text="Forge Version:" FontWeight="Bold" Margin="0,0,5,0"/>
+                        <ComboBox x:Name="cbCustomBuild" Width="150" Margin="0,0,10,0"/>
+                    </StackPanel>
+
+                    <!-- Minecraft Version Selection -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Minecraft Version:" FontWeight="Bold" Margin="0 0 10 0"/>
+                        <ComboBox x:Name="cbMinecraftVersion" Width="150" HorizontalAlignment="Left" 
+                        SelectionChanged="cbMinecraftVersion_SelectionChanged"/>
+                    </StackPanel>
+                </StackPanel>
+                <!-- Forge Version Selection -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0 10 0 0">
+                    <TextBlock x:Name="tbCustomBuildBottom" Text="Forge Version:" FontWeight="Bold" Margin="0 0 10 0"/>
+                    <RadioButton x:Name="rbStable" Content="Latest Stable"
+                    Checked="rbStable_Checked"/>
+                    <RadioButton x:Name="rbExperimental" Content="Latest Experimental" Margin="10 0 0 0" 
+                    Checked="rbExperimental_Checked"/>
+                    <RadioButton x:Name="rbCustom" Content="Custom Version" Margin="10 0 0 0" 
+                    Checked="rbCustom_Checked"/>
+                </StackPanel>
             </StackPanel>
 
-            <!-- Hosting Selection -->
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="Hosting Method:" FontWeight="Bold" Margin="10 20 0 10"/>
-                <local:TooltipButton TooltipText="{x:Static resources:Tooltips.HostingMethod}" Margin="5,0,0,0"/>
-            </StackPanel>
-            <StackPanel Orientation="Horizontal">
-                <RadioButton x:Name="rbPlayit" Content="Playit.gg" Margin="20 0 0 0"/>
-                <RadioButton x:Name="rbNgrok" Content="Ngrok" Margin="10 0 0 0"/>
-                <RadioButton x:Name="rbPortForward" Content="Port Forwarding" Margin="10 0 0 0"/>
+            <!-- Row 1: Output textbox -->
+            <TextBox x:Name="txtDebugOutput" Grid.Row="1" Margin="10"
+             AcceptsReturn="True" AcceptsTab="True" TextWrapping="WrapWithOverflow"
+             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+             IsReadOnly="True" />
+
+            <!-- Row 2: Hosting selection -->
+            <StackPanel Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Top" Orientation="Vertical">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="Hosting Method:" FontWeight="Bold"/>
+                    <local:TooltipButton TooltipText="{x:Static resources:Tooltips.HostingMethod}" Margin="5,0,0,0"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton x:Name="rbPlayit" Content="Playit.gg"/>
+                    <RadioButton x:Name="rbNgrok" Content="Ngrok" Margin="10 0 0 0"/>
+                    <RadioButton x:Name="rbPortForward" Content="Port Forwarding" Margin="10 0 0 0"/>
+                </StackPanel>
             </StackPanel>
 
-            <!-- Action Buttons -->
-            <StackPanel Orientation="Horizontal" Margin="0 10 0 0">
-                <Button Content="Install Forge" Width="150" Name="btnInstallForge" Click="btnInstallForge_Click"/>
-                <Button Content="Start Server" Width="150" Name="btnStartServer" Click="btnStartServer_Click"/>
-                <Button Content="Restart Server" Width="150" Name="btnRestartServer" Click="btnRestartServer_Click"/>
+            <!-- Row 3: Server Address -->
+            <StackPanel Grid.Row="3" HorizontalAlignment="Left" VerticalAlignment="Center" Orientation="Vertical" Margin="20 0 10 0">
+                <TextBlock Text="Server Address:" FontWeight="Bold" HorizontalAlignment="Center" Margin="0 0 0 5"/>
+                <Button x:Name="btnServerAddress" Content="N/A" Click="btnServerAddress_Click"
+                Width="150" Padding="0 10 0 10" HorizontalAlignment="Left" Cursor="Hand"/>
             </StackPanel>
 
-            <!-- Server Output -->
-            <TextBlock Text="Server Address:" FontWeight="Bold" Margin="10 20 0 0"/>
-            <Button x:Name="btnServerAddress" Content="N/A" Click="btnServerAddress_Click"
-                    Width="100" HorizontalAlignment="Left" Margin="20 0 0 0"/>
-            
-            <!-- Debug output log -->
-            <TextBox Margin="10 10 0 0" Height="90"
-                     x:Name="txtDebugOutput"
-                     Background="Black"
-                     Foreground="LightGreen"
-                     FontFamily="Consolas"
-                     FontSize="12"
-                     IsReadOnly="True"
-                     TextWrapping="WrapWithOverflow"
-                     VerticalScrollBarVisibility="Visible"
-                     HorizontalScrollBarVisibility="Auto"/>
-        </StackPanel>
+            <!-- Row 3: Big button + dropdown -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <!-- Main Run Button -->
+                    <Button x:Name="btnMasterRun"
+                    Content="Run Server"
+                    FontSize="20"
+                    Padding="30,15"
+                    Background="#FF4CAF50"
+                    Foreground="White"
+                    BorderThickness="0"
+                    Cursor="Hand"
+                    Click="btnMasterRun_Click"/>
+
+                    <!-- Dropdown Button -->
+                    <Button Content="▼" Click="DropdownButton_Click">
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Install Forge" x:Name="btnInstallForge" Click="btnInstallForge_Click"/>
+                                <MenuItem Header="Start Server" x:Name="btnStartServer" Click="btnStartServer_Click"/>
+                                <MenuItem Header="Restart Server" x:Name="btnRestartServer" Click="btnRestartServer_Click"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                </StackPanel>
+            </StackPanel>
+        </Grid>
 
         <!-- RIGHT COLUMN: Sidebars -->
         <Grid Grid.Column="1">

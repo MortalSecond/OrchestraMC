@@ -7,11 +7,12 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace MinecraftServerTool
 {
@@ -31,16 +32,28 @@ namespace MinecraftServerTool
             // Subscribe to RestartRequired
             mainVm.ServerProperties.RestartRequired += () =>
             {
-                if (btnStartServer.Content.ToString() == "Stop Server")
+                if (btnStartServer.Header.ToString() == "Stop Server")
                     UpdateRestartButtonState("Restart Required", true);
             };
+
+            _flushTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(100)
+            };
+            _flushTimer.Tick += (s, e) => FlushOutputToUI();
+            _flushTimer.Start();
         }
         // Initializes class for the commandline of the
         // Forge Server JVM
         private Process minecraftServerProcess;
         private Process ngrokProcess;
         private Process playitProcess;
+
+        // Initializes classes for the output textbox
         private TaskCompletionSource<string> _tunnelAddressTcs;
+        private readonly StringBuilder _outputBuffer = new StringBuilder();
+        private readonly object _bufferLock = new object();
+        private DispatcherTimer _flushTimer;
         // Initializing class for the Maven Metadata JSON
         // JSON Structure:
         //  "1.1": [
@@ -103,6 +116,8 @@ namespace MinecraftServerTool
             string mcVersion = cbMinecraftVersion.SelectedItem as string;
             var (latestStable, latestExperimental) = await GetLatestAvailableForgeVersionsAsync(mcVersion);
 
+            if (rbStable.IsChecked == false && rbExperimental.IsChecked == false && rbCustom.IsChecked == false)
+                return "None";
             if (rbStable.IsChecked == true) return latestStable;
             if (rbExperimental.IsChecked == true) return latestExperimental;
             if (rbCustom.IsChecked == true)
@@ -288,6 +303,8 @@ namespace MinecraftServerTool
         }
         private void StartNgrok(string modpackPath)
         {
+            // I removed the output logging from Ngrok because ngrok.exe doesn't produce an stdout.
+            // Kinda sucks, but that's how it'll be until i can find a proper way to log it.
             ngrokProcess = new Process
             {
                 StartInfo = new ProcessStartInfo
@@ -301,29 +318,6 @@ namespace MinecraftServerTool
                     CreateNoWindow = true
                 }
             };
-
-            // Subscribe to output
-            ngrokProcess.OutputDataReceived += (sender, e) =>
-            {
-                Dispatcher.Invoke(() =>
-                {
-                    txtDebugOutput.AppendText(e.Data + Environment.NewLine);
-                    txtDebugOutput.ScrollToEnd();
-                });
-            };
-
-            ngrokProcess.ErrorDataReceived += (sender, e) =>
-            {
-                Dispatcher.Invoke(() =>
-                {
-                    txtDebugOutput.AppendText("[ERROR] " + e.Data + Environment.NewLine);
-                    txtDebugOutput.ScrollToEnd();
-                });
-            };
-
-            ngrokProcess.Start();
-            ngrokProcess.BeginOutputReadLine();
-            ngrokProcess.BeginErrorReadLine();
         }
         private async Task DownloadNgrokAsync(string binariesPath)
         {
@@ -422,25 +416,28 @@ namespace MinecraftServerTool
             // Subscribe to output
             playitProcess.OutputDataReceived += (sender, e) =>
             {
-                if (!string.IsNullOrEmpty(e.Data))
+                if (string.IsNullOrEmpty(e.Data)) return;
+
+                // Only log if we haven’t already found a tunnel
+                if (!_tunnelAddressTcs.Task.IsCompleted)
                 {
-                    Dispatcher.Invoke(() =>
+                    Dispatcher.BeginInvoke(() =>
                     {
                         txtDebugOutput.AppendText(e.Data + Environment.NewLine);
                         txtDebugOutput.ScrollToEnd();
                     });
+                }
 
-                    if (e.Data.Trim().Equals("TUNNELS", StringComparison.OrdinalIgnoreCase))
+                if (e.Data.Trim().Equals("TUNNELS", StringComparison.OrdinalIgnoreCase))
+                {
+                    inTunnelsSection = true;
+                }
+                else if (inTunnelsSection && e.Data.Contains("=>"))
+                {
+                    var parts = e.Data.Split(["=>"], StringSplitOptions.None);
+                    if (parts.Length > 0)
                     {
-                        inTunnelsSection = true;
-                    }
-                    else if (inTunnelsSection && e.Data.Contains("=>"))
-                    {
-                        var parts = e.Data.Split(["=>"], StringSplitOptions.None);
-                        if (parts.Length > 0)
-                        {
-                            _tunnelAddressTcs.TrySetResult(parts[0].Trim());
-                        }
+                        _tunnelAddressTcs.TrySetResult(parts[0].Trim());
                     }
                 }
             };
@@ -449,7 +446,7 @@ namespace MinecraftServerTool
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    Dispatcher.Invoke(() =>
+                    Dispatcher.BeginInvoke(() =>
                     {
                         txtDebugOutput.AppendText("[ERROR] " + e.Data + Environment.NewLine);
                         txtDebugOutput.ScrollToEnd();
@@ -522,7 +519,7 @@ namespace MinecraftServerTool
 
             await DownloadFileAsync(downloadURL, savePath);
         }
-        private void InstallForgeServer(string forgeInstallerPath, string targetDirectory)
+        private async Task InstallForgeServerAsync(string forgeInstallerPath, string targetDirectory)
         {
             var process = new Process
             {
@@ -543,11 +540,10 @@ namespace MinecraftServerTool
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    Dispatcher.Invoke(() =>
+                    lock (_bufferLock)
                     {
-                        txtDebugOutput.AppendText(e.Data + Environment.NewLine);
-                        txtDebugOutput.ScrollToEnd();
-                    });
+                        _outputBuffer.AppendLine(e.Data);
+                    }
                 }
             };
 
@@ -555,18 +551,17 @@ namespace MinecraftServerTool
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    Dispatcher.Invoke(() =>
+                    lock (_bufferLock)
                     {
-                        txtDebugOutput.AppendText("[ERROR] " + e.Data + Environment.NewLine);
-                        txtDebugOutput.ScrollToEnd();
-                    });
+                        _outputBuffer.AppendLine("[ERROR] " + e.Data);
+                    }
                 }
             };
 
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
-            process.WaitForExit();
+            await process.WaitForExitAsync();
         }
         private async Task PrepareForgeAsync(string modpackPath, string forgeVersion, string mcVersion)
         {
@@ -575,18 +570,21 @@ namespace MinecraftServerTool
 
             UpdateInstallButtonState("Installing...");
             string installerPath = GetInstallerPath();
-            await Task.Run(() => InstallForgeServer(installerPath, modpackPath));
+            await InstallForgeServerAsync(installerPath, modpackPath);
 
             // Does some run.bat shenanigans to properly set up the server files
-            UpdateInstallButtonState("Generating Files...");
+            UpdateInstallButtonState("Generating Modpack Files...");
+            AppendOutputText("Generating Files...");
             // Step 1: Run once to generate eula.txt
             RunServerOnce(modpackPath);
             UpdateInstallButtonState("Accepting EULA...");
+            AppendOutputText("Accepting EULA...");
             // Step 2: Change the EULA's text file to true
             AcceptEula(modpackPath);
-            UpdateInstallButtonState("Processing...");
+            UpdateInstallButtonState("Generating Server Files...");
+            AppendOutputText("Generating Files...");
             // Step 3: Run once more to generate the rest of the files
-            RunServerOnce(modpackPath);
+            StartServer(modpackPath);
         }
         private async Task PreparePortForwardAsync()
         {
@@ -630,11 +628,10 @@ namespace MinecraftServerTool
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    Dispatcher.Invoke(() =>
+                    lock (_bufferLock)
                     {
-                        txtDebugOutput.AppendText(e.Data + Environment.NewLine);
-                        txtDebugOutput.ScrollToEnd();
-                    });
+                        _outputBuffer.AppendLine(e.Data);
+                    }
                 }
             };
 
@@ -642,11 +639,10 @@ namespace MinecraftServerTool
             {
                 if (!string.IsNullOrEmpty(e.Data))
                 {
-                    Dispatcher.Invoke(() =>
+                    lock (_bufferLock)
                     {
-                        txtDebugOutput.AppendText("[ERROR] " + e.Data + Environment.NewLine);
-                        txtDebugOutput.ScrollToEnd();
-                    });
+                        _outputBuffer.AppendLine("[ERROR] " + e.Data);
+                    }
                 }
             };
 
@@ -786,25 +782,52 @@ namespace MinecraftServerTool
         private void UpdateInstallButtonState(string text, bool enabled = false)
         {
             btnInstallForge.IsEnabled = enabled;
-            btnInstallForge.Content = text;
+            btnInstallForge.Header = text;
         }
         // Updates the Start Server button depending on task
         private void UpdateServerButtonState(string text, bool enabled = false)
         {
             btnStartServer.IsEnabled = enabled;
-            btnStartServer.Content = text;
+            btnStartServer.Header = text;
         }
         // Updates the Restart Server button depending on server status
         private void UpdateRestartButtonState(string text, bool enabled = false)
         {
             btnRestartServer.IsEnabled = enabled;
-            btnRestartServer.Content = text;
+            btnRestartServer.Header = text;
+        }
+        // Updates the big 'master' button
+        private void UpdateMasterButtonState(string text, bool enabled = false)
+        {
+            btnMasterRun.Content = text;
+            btnMasterRun.IsEnabled = enabled;
         }
         // Updates the Server Adress textblock to the public URL
         private void UpdateServerAddressText(string text)
         {
             btnServerAddress.Content = text;
         }
+        // Appends text to the output window
+        private void AppendOutputText(string text)
+        {
+            txtDebugOutput.AppendText(text + Environment.NewLine);
+            txtDebugOutput.ScrollToEnd();
+        }
+        private void FlushOutputToUI()
+        {
+            string textToAppend;
+
+            lock (_bufferLock)
+            {
+                if (_outputBuffer.Length == 0) return;
+                textToAppend = _outputBuffer.ToString();
+                _outputBuffer.Clear();
+            }
+
+            txtDebugOutput.AppendText(textToAppend);
+            txtDebugOutput.ScrollToEnd();
+        }
+
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
@@ -868,7 +891,7 @@ namespace MinecraftServerTool
             string modpackPath = txtModpackFolderPath.Text.Trim();
             string binariesFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "binaries");
             string selectedHost = GetSelectedHost();
-            string buttonPrompt = btnStartServer.Content.ToString();
+            string buttonPrompt = btnStartServer.Header.ToString();
 
             switch (buttonPrompt)
             {
@@ -892,7 +915,7 @@ namespace MinecraftServerTool
         {
             string modpackPath = txtModpackFolderPath.Text;
 
-            if (btnRestartServer.Content.ToString() == "Restart Required")
+            if (btnRestartServer.Header.ToString() == "Restart Required")
                 ServerPropertiesService.SaveServerProperties(modpackPath, mainVm.ServerProperties);
 
             UpdateRestartButtonState("Saving...");
@@ -922,16 +945,22 @@ namespace MinecraftServerTool
         private void rbCustom_Checked(object sender, RoutedEventArgs e)
         {
             cbCustomBuild.Visibility = Visibility.Visible;
+            tbCustomBuild.Visibility = Visibility.Visible;
+            tbCustomBuildBottom.Visibility = Visibility.Collapsed;
         }
 
         private void rbExperimental_Checked(object sender, RoutedEventArgs e)
         {
             cbCustomBuild.Visibility = Visibility.Collapsed;
+            tbCustomBuild.Visibility = Visibility.Collapsed;
+            tbCustomBuildBottom.Visibility = Visibility.Visible;
         }
 
         private void rbStable_Checked(object sender, RoutedEventArgs e)
         {
             cbCustomBuild.Visibility = Visibility.Collapsed;
+            tbCustomBuild.Visibility = Visibility.Collapsed;
+            tbCustomBuildBottom.Visibility = Visibility.Visible;
         }
 
         private void txtModpackFolderPath_TextChanged(object sender, TextChangedEventArgs e)
@@ -974,6 +1003,75 @@ namespace MinecraftServerTool
         private void btnServerAddress_Click(object sender, RoutedEventArgs e)
         {
             Clipboard.SetText(btnServerAddress.Content.ToString());
+        }
+
+        private void DropdownButton_Click(object sender, RoutedEventArgs e)
+        {
+            var button = sender as Button;
+            if (button?.ContextMenu != null)
+            {
+                button.ContextMenu.PlacementTarget = button;
+                button.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                button.ContextMenu.IsOpen = true;
+            }
+        }
+
+        // Validates absolutely everything so the user only has to click a single button
+        // Installs server if needed, installs the tunnels if they're missing, or simply
+        // starts up the server should everything already be in place
+        private async void btnMasterRun_Click(object sender, RoutedEventArgs e)
+        {
+            string modpackPath = txtModpackFolderPath.Text;
+            string mcVersion = cbMinecraftVersion.SelectedItem as string;
+
+            if(btnMasterRun.Content.ToString() == "Run Server")
+            {
+                UpdateMasterButtonState("Preparing...");
+
+                AppendOutputText("Validating Inputs...");
+                bool isPopulated = ValidateInputs(modpackPath, mcVersion);
+                if (isPopulated)
+                {
+                    AppendOutputText("Checking if server is already installed...");
+                    bool isInstalled = ValidateServerInstallation(modpackPath);
+                    if (isInstalled)
+                    {
+                        AppendOutputText("Starting the server...");
+                        btnStartServer_Click(sender, e);
+                    }
+                    else
+                    {
+                        // Just a failsafe to autoselect the stable Forge version
+                        // in case none of the radioboxes are checked
+                        string selectedForgeVersion = await GetSelectedForgeVersion();
+                        if (selectedForgeVersion == "None")
+                            rbStable.IsChecked = true;
+
+                        AppendOutputText("Installing Forge...");
+                        await PrepareForgeAsync(modpackPath, selectedForgeVersion, mcVersion);
+
+                        AppendOutputText("Starting the server...");
+                        btnStartServer_Click(sender, e);
+                    }
+                    // Gives a 20 second buffer to let the server's JVM boot up
+                    await Task.Delay(20000);
+                    UpdateMasterButtonState("Stop Server", true);
+                    return;
+                }
+            }
+            
+            if(btnMasterRun.Content.ToString() == "Stop Server")
+            {
+                string selectedHost = GetSelectedHost();
+
+                AppendOutputText("Stopping the server...");
+                KillServer();
+                AppendOutputText("Stopping tunneling service...");
+                StopHosts(selectedHost);
+
+                UpdateMasterButtonState("Run Server", true);
+                return;
+            }
         }
     }
 }
