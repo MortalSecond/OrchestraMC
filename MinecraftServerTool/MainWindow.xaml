@@ -15,7 +15,7 @@
         Right = Sidebar -->
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="3*"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*" x:Name="RightColumn" />
         </Grid.ColumnDefinitions>
 
         <!-- LEFT COLUMN: Main Server Menu -->

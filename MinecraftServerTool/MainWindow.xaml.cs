@@ -53,6 +53,9 @@ namespace MinecraftServerTool
             btnStartServer.IsEnabled = false;
             btnRestartServer.IsEnabled = false;
 
+            // Collapses the right column
+            RightColumn.Width = new GridLength(0);
+
             // Auto-selects host and Forge version to prevent any exception errors.
             rbStable.IsChecked = true;
             rbPlayit.IsChecked = true;
@@ -194,6 +197,7 @@ namespace MinecraftServerTool
                 // Makes all buttons and sidebars usable and visible
                 spServerPropertiesPanel.Visibility = Visibility.Visible;
                 spJavaArgumentsControl.Visibility = Visibility.Visible;
+                RightColumn.Width = new GridLength(1, GridUnitType.Star);
                 btnStartServer.IsEnabled = true;
                 btnRestartServer.IsEnabled = true;
 
