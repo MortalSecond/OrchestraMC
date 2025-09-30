@@ -1,18 +1,11 @@
 ﻿using MinecraftServerTool.Services;
 using MinecraftServerTool.ViewModels;
-using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Threading;
 
 namespace MinecraftServerTool
 {
@@ -20,11 +13,22 @@ namespace MinecraftServerTool
     {
         // Initializes classes for internal flow
         private readonly MainWindowViewModel mainVm;
-        private readonly HttpClient _httpClient;
+
+        private readonly UIService _uiService;
+        private readonly UtilsService _utilsService;
+        private readonly PlayitService _playitService;
+        private readonly NgrokService _ngrokService;
+        private readonly ServerService _serverService;
+        private readonly ForgeService _forgeService;
         public MainWindow()
         {
             InitializeComponent();
-            _httpClient = new HttpClient();
+            _uiService = new UIService(this);
+            _utilsService = new UtilsService(_uiService, this);
+            _playitService = new PlayitService(_utilsService, _uiService);
+            _ngrokService = new NgrokService(_utilsService, _uiService);
+            _serverService = new ServerService(_uiService, _utilsService, _playitService, _ngrokService);
+            _forgeService = new ForgeService(_uiService, _utilsService, _serverService);
 
             mainVm = new MainWindowViewModel();
             DataContext = mainVm;
@@ -33,806 +37,14 @@ namespace MinecraftServerTool
             mainVm.ServerProperties.RestartRequired += () =>
             {
                 if (btnStartServer.Header.ToString() == "Stop Server")
-                    UpdateRestartButtonState("Restart Required", true);
-            };
-
-            _flushTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(100)
-            };
-            _flushTimer.Tick += (s, e) => FlushOutputToUI();
-            _flushTimer.Start();
-        }
-        // Initializes class for the commandline of the
-        // Forge Server JVM
-        private Process minecraftServerProcess;
-        private Process ngrokProcess;
-        private Process playitProcess;
-
-        // Initializes classes for the output textbox
-        private TaskCompletionSource<string> _tunnelAddressTcs;
-        private readonly StringBuilder _outputBuffer = new StringBuilder();
-        private readonly object _bufferLock = new object();
-        private DispatcherTimer _flushTimer;
-        // Initializing class for the Maven Metadata JSON
-        // JSON Structure:
-        //  "1.1": [
-        //      "1.1-1.3.2.1",
-        //      "1.1-1.3.2.2",
-        //      "1.1-1.3.2.3",
-        //      "1.1-1.3.2.4",
-        public class ForgeMetadata : Dictionary<string, List<string>> { }
-
-        // Initializing class for the Forge Promotions JSON
-        // JSON Structure:
-        //  "promos": {
-        //      "1.1-latest": "1.3.4.29",
-        //      "1.2.3-latest": "1.4.1.64",
-        //      "1.2.4-latest": "2.0.0.68",
-        public class ForgePromotions
-        {
-            public Dictionary<string, string> promos { get; set; }
-        }
-
-        // Helper method to ensure there's text in the first two inputs
-        private static bool ValidateInputs(string folderPath, string mcVersion)
-        {
-            if (string.IsNullOrEmpty(mcVersion))
-            {
-                MessageBox.Show("Please select a Minecraft version.");
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
-            {
-                MessageBox.Show("Please select a valid modpack folder first.");
-                return false;
-            }
-
-            return true;
-        }
-        // Helper method to see if Forge Server is already installed
-        private bool ValidateServerInstallation(string folderPath)
-        {
-            string eulaPath = Path.Combine(folderPath, "eula.txt");
-
-            // Checks if the eula.txt file exists and has been accepted
-            if (File.Exists(eulaPath))
-            {
-                string eulaText = File.ReadAllText(eulaPath);
-                if (eulaText.Contains("eula=true"))
-                {
-                    UpdateInstallButtonState("✔ Installed");
-                    return true;
-                }
-            }
-
-            UpdateInstallButtonState("Install Forge", true);
-            return false;
-        }
-        // Helper to get the selected Forge version
-        private async Task<string> GetSelectedForgeVersion()
-        {
-            string mcVersion = cbMinecraftVersion.SelectedItem as string;
-            var (latestStable, latestExperimental) = await GetLatestAvailableForgeVersionsAsync(mcVersion);
-
-            if (rbStable.IsChecked == false && rbExperimental.IsChecked == false && rbCustom.IsChecked == false)
-                return "None";
-            if (rbStable.IsChecked == true) return latestStable;
-            if (rbExperimental.IsChecked == true) return latestExperimental;
-            if (rbCustom.IsChecked == true)
-                return cbCustomBuild.Text.Replace(" (Latest Build)", "");
-
-            throw new InvalidOperationException("Could not determine Forge version.");
-        }
-        // Helper to get the selected server hosting method
-        private string GetSelectedHost()
-        {
-            if (rbNgrok.IsChecked == true) return "ngrok";
-            if (rbPlayit.IsChecked == true) return "playit";
-            if (rbPortForward.IsChecked == true) return "portforward";
-
-            throw new InvalidOperationException("Could not determine the server host version.");
-        }
-        // Helper to look for any forge installer in the folder
-        private string GetInstallerPath()
-        {
-            string folderPath = txtModpackFolderPath.Text;
-            return Directory.GetFiles(folderPath, "forge-*-installer.jar").First();
-        }
-        // Helper to fetch the already installed Forge version
-        private (string mcVersion, string forgeVersion) GetInstalledVersion()
-        {
-            // Since Forge doesn't produce a manifest.json for easy version handling, this
-            // basically uses the folder name inside the libraries folder, then it splits
-            // it into two to get the necessary version strings
-            string modpackPath = txtModpackFolderPath.Text;
-            string folderPath = Path.Combine(modpackPath, "libraries", "net", "minecraftforge", "forge");
-            string folderName = Path.GetFileName(Directory.GetDirectories(folderPath).First());
-            var parts = folderName.Split('-');
-            string mcVersion = parts[0];
-            string forgeVersion = parts[1];
-
-            return (mcVersion, forgeVersion);
-        }
-        // Helper HttpClient for the download of files
-        private async Task DownloadFileAsync(string downloadURL, string savePath)
-        {
-            try
-            {
-                using var response = await _httpClient.GetAsync(downloadURL, HttpCompletionOption.ResponseHeadersRead);
-                response.EnsureSuccessStatusCode();
-
-                await using var fs = new FileStream(savePath, FileMode.Create, FileAccess.Write, FileShare.None);
-                await response.Content.CopyToAsync(fs);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error downloading file: {ex.Message}");
-            }
-        }
-        // Fetches the latest and stable versions of Forge
-        private async Task<(string latestStable, string latestExperimental)> GetLatestAvailableForgeVersionsAsync(string mcVersion)
-        {
-            string url = "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json";
-
-            try
-            {
-                string json = await _httpClient.GetStringAsync(url);
-                var data = JsonConvert.DeserializeObject<ForgePromotions>(json);
-
-                data.promos.TryGetValue($"{mcVersion}-recommended", out string stable);
-                data.promos.TryGetValue($"{mcVersion}-latest", out string experimental);
-
-                return (stable, experimental);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Error fetching Forge promotions: " + ex.Message);
-                return (null, null);
-            }
-        }
-        private async Task<List<string>> GetAllAvailableForgeVersionsAsync()
-        {
-            string selectedMcVersion = cbMinecraftVersion.SelectedItem.ToString();
-
-            try
-            {
-                string url = "https://files.minecraftforge.net/net/minecraftforge/forge/maven-metadata.json";
-
-                string json = await _httpClient.GetStringAsync(url);
-                var metadata = JsonConvert.DeserializeObject<ForgeMetadata>(json);
-
-                if (metadata.TryGetValue(selectedMcVersion, out List<string> value))
-                {
-                    var forgeVersions = value.Select(v => v.Contains('-') ? v.Split('-')[1] : v) // Takes only the Forge build
-                    .ToList();
-
-                    // Appends " (Latest Build)" to the last item
-                    if (forgeVersions.Count > 0)
-                    {
-                        int lastIndex = forgeVersions.Count - 1;
-                        forgeVersions[lastIndex] = forgeVersions[lastIndex] + " (Latest Build)";
-                    }
-
-                    return forgeVersions;
-                }
-                else
-                {
-                    return null;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to fetch Forge versions: {ex.Message}");
-                return null;
-            }
-        }
-        private async Task<HashSet<string>> GetAvailableMcVersionsAsync()
-        {
-            // Preload Minecraft versions from promotions.json
-            string url = "https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json";
-
-            string json = await _httpClient.GetStringAsync(url);
-            var data = JsonConvert.DeserializeObject<ForgePromotions>(json);
-
-            // Extracts the unique MC versions from the keys
-            var mcVersions = new HashSet<string>();
-            foreach (var key in data.promos.Keys)
-            {
-                var mcVer = key.Split('-')[0]; // Parses it into something like "1.20.1"
-                mcVersions.Add(mcVer);
-            }
-
-            return mcVersions;
-        }
-        private async Task PopulateCustomForgeBuildCombobox()
-        {
-            // Detects if there's text in the modpack path textbox, to populate with
-            // the default Minecraft version's Forge builds, or with the 
-            if (txtModpackFolderPath.Text == null || txtModpackFolderPath.Text == "")
-            {
-                var forgeVersions = await GetAllAvailableForgeVersionsAsync();
-
-                cbCustomBuild.ItemsSource = forgeVersions;
-                cbCustomBuild.SelectedIndex = forgeVersions.Count - 1; // default to latest
-            }
-            else
-            {
-                var forgeVersions = await GetAllAvailableForgeVersionsAsync();
-
-                if (forgeVersions == null)
-                {
-                    cbCustomBuild.ItemsSource = null;
-                    cbCustomBuild.Items.Clear();
-                    cbCustomBuild.Items.Add("No Forge builds found");
-                    cbCustomBuild.SelectedIndex = 0;
-                }
-                else
-                {
-                    cbCustomBuild.ItemsSource = forgeVersions;
-                    cbCustomBuild.SelectedIndex = 0;
-
-                    bool isInstalled = ValidateServerInstallation(txtModpackFolderPath.Text);
-                    if (isInstalled)
-                    {
-                        var (_, forgeVersion) = GetInstalledVersion();
-                        cbCustomBuild.SelectedItem = forgeVersion;
-                    }
-                }
-            }
-        }
-        // Fetches the public URL from Ngrok's API
-        private async Task<string> GetNgrokAddressAsync()
-        {
-            string response = await _httpClient.GetStringAsync("http://127.0.0.1:4040/api/tunnels");
-            dynamic json = Newtonsoft.Json.JsonConvert.DeserializeObject(response);
-
-            // Get the first TCP tunnel
-            foreach (var tunnel in json.tunnels)
-            {
-                if ((string)tunnel.proto == "tcp")
-                {
-                    // The output has a prefix that messes with the usable URL,
-                    // so it has to be trimmed to be properly usable
-                    string forwarding = tunnel.public_url;
-                    return forwarding.Replace("tcp://", "");
-                }
-            }
-            return null;
-        }
-        private void StartNgrok(string modpackPath)
-        {
-            // I removed the output logging from Ngrok because ngrok.exe doesn't produce an stdout.
-            // Kinda sucks, but that's how it'll be until i can find a proper way to log it.
-            ngrokProcess = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = Path.Combine(modpackPath, "ngrok.exe"),
-                    Arguments = "tcp 25565",
-                    WorkingDirectory = modpackPath,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                }
+                    _uiService.UpdateRestartButtonState("Restart Required", true);
             };
         }
-        private async Task DownloadNgrokAsync(string binariesPath)
-        {
-            string ngrokZipPath = Path.Combine(binariesPath, "ngrok.zip");
-
-            // Downloads Ngrok
-            string downloadURL = "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip";
-            await DownloadFileAsync(downloadURL, ngrokZipPath);
-
-            // Extracts the ngrok.exe into binaries folder
-            string ngrokExePath = Path.Combine(binariesPath, "ngrok.exe");
-            using (ZipArchive archive = ZipFile.OpenRead(ngrokZipPath))
-            {
-                foreach (var entry in archive.Entries)
-                {
-                    if (entry.FullName.EndsWith("ngrok.exe", StringComparison.OrdinalIgnoreCase))
-                    {
-                        entry.ExtractToFile(ngrokExePath, overwrite: true);
-                        break;
-                    }
-                }
-            }
-
-            // Deletes the ZIP to keep things clean
-            File.Delete(ngrokZipPath);
-        }
-        private static void InstallNgrok(string modpackFolder, string ngrokBinariesPath)
-        {
-            // Copies ngrok.exe into modpack folder
-            string targetPath = Path.Combine(modpackFolder, "ngrok.exe");
-            File.Copy(ngrokBinariesPath, targetPath, overwrite: true);
-        }
-        private async Task PrepareNgrokAsync(string binariesFolder, string modpackPath)
-        {
-            string ngrokBinariesPath = Path.Combine(binariesFolder, "Ngrok.exe");
-            string ngrokModpackPath = Path.Combine(modpackPath, "Ngrok.exe");
-
-            bool isNgrokDownloaded = File.Exists(ngrokBinariesPath);
-            bool isNgrokInstalled = File.Exists(ngrokModpackPath);
-
-            // Downloads Ngrok and unzips it into the binaries
-            if (isNgrokDownloaded == false)
-            {
-                UpdateServerButtonState("Downloading Ngrok...");
-                await DownloadNgrokAsync(ngrokBinariesPath);
-            }
-            // Copies and pastes Ngrok from the binaries into the modpack
-            if (isNgrokInstalled == false)
-            {
-                UpdateServerButtonState("Installing Ngrok...");
-                InstallNgrok(modpackPath, ngrokBinariesPath);
-            }
-
-            // Starts the Ngrok tunnel and gives 2 seconds of buffer
-            // Just so the API has time to initialize
-            StartNgrok(modpackPath);
-            Task.Delay(2000).Wait();
-
-            // Fetches the public URL and updates the textblock to reflect that
-            string serverAddress = await GetNgrokAddressAsync();
-            if (!string.IsNullOrEmpty(serverAddress))
-            {
-                UpdateServerAddressText(serverAddress);
-            }
-        }
-        private void StopNgrok()
-        {
-            if (ngrokProcess != null && !ngrokProcess.HasExited)
-            {
-                ngrokProcess.Kill();
-                ngrokProcess = null;
-            }
-        }
-        // I wanted to separate StartPlayit and GetPlayitAddress separated,
-        // but the cmd process variable is such a headache -- so this will
-        // provide the server address string for sanity's sake
-        private async Task<string> StartPlayit(string playitModpackPath, string modpackPath)
-        {
-            _tunnelAddressTcs = new TaskCompletionSource<string>();
-
-            playitProcess = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = playitModpackPath,
-                    WorkingDirectory = modpackPath,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                }
-            };
-
-            bool inTunnelsSection = false;
-
-            // Subscribe to output
-            playitProcess.OutputDataReceived += (sender, e) =>
-            {
-                if (string.IsNullOrEmpty(e.Data)) return;
-
-                // Only log if we haven’t already found a tunnel
-                if (!_tunnelAddressTcs.Task.IsCompleted)
-                {
-                    Dispatcher.BeginInvoke(() =>
-                    {
-                        txtDebugOutput.AppendText(e.Data + Environment.NewLine);
-                        txtDebugOutput.ScrollToEnd();
-                    });
-                }
-
-                if (e.Data.Trim().Equals("TUNNELS", StringComparison.OrdinalIgnoreCase))
-                {
-                    inTunnelsSection = true;
-                }
-                else if (inTunnelsSection && e.Data.Contains("=>"))
-                {
-                    var parts = e.Data.Split(["=>"], StringSplitOptions.None);
-                    if (parts.Length > 0)
-                    {
-                        _tunnelAddressTcs.TrySetResult(parts[0].Trim());
-                    }
-                }
-            };
-
-            playitProcess.ErrorDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    Dispatcher.BeginInvoke(() =>
-                    {
-                        txtDebugOutput.AppendText("[ERROR] " + e.Data + Environment.NewLine);
-                        txtDebugOutput.ScrollToEnd();
-                    });
-                }
-            };
-
-            // Starts the Playit tunnel and gives 15 seconds of buffer
-            playitProcess.Start();
-            playitProcess.BeginOutputReadLine();
-            playitProcess.BeginErrorReadLine();
-            var completedTask = await Task.WhenAny(_tunnelAddressTcs.Task, Task.Delay(15000));
-            return completedTask == _tunnelAddressTcs.Task ? await _tunnelAddressTcs.Task : null;
-        }
-        private async Task DownloadPlayitAsync(string playitBinariesPath)
-        {
-            string downloadURL = "https://github.com/playit-cloud/playit-agent/releases/download/v0.15.26/playit-windows-x86_64-signed.exe";
-
-            await DownloadFileAsync(downloadURL, playitBinariesPath);
-        }
-        private static void InstallPlayit(string modpackPath, string playitBinariesPath)
-        {
-            // Copies ngrok.exe into modpack folder
-            string targetPath = Path.Combine(modpackPath, "playit.exe");
-            File.Copy(playitBinariesPath, targetPath, overwrite: true);
-        }
-        private async Task PreparePlayitAsync(string binariesFolder, string modpackPath)
-        {
-            string playitBinariesPath = Path.Combine(binariesFolder, "playit.exe");
-            string playitModpackPath = Path.Combine(modpackPath, "playit.exe");
-
-            bool isPlayitDownloaded = File.Exists(playitBinariesPath);
-            bool isPlayitInstalled = File.Exists(playitModpackPath);
-
-            // Download Playit if not already present
-            if (isPlayitDownloaded == false)
-            {
-                UpdateServerButtonState("Downloading Playit...");
-                await DownloadPlayitAsync(playitBinariesPath);
-            }
-            // Copy to modpack folder if not installed
-            if (isPlayitInstalled == false)
-            {
-                UpdateServerButtonState("Installing Playit...");
-                InstallPlayit(modpackPath, playitBinariesPath);
-            }
-
-            // Starts the Playit.gg tunnel, fetches the public address,
-            // and updates the textblock to reflect that
-            UpdateServerButtonState("Starting Playit.gg...");
-            string serverAddress = await StartPlayit(playitModpackPath, modpackPath);
-            if (!string.IsNullOrEmpty(serverAddress))
-            {
-                UpdateServerAddressText(serverAddress);
-            }
-        }
-        private void StopPlayit()
-        {
-            if (playitProcess != null && !playitProcess.HasExited)
-            {
-                playitProcess.Kill();
-                playitProcess = null;
-            }
-        }
-        private async Task DownloadForgeAsync(string folderPath, string forgeVersion, string mcVersion)
-        {
-            string savePath = Path.Combine(folderPath, $"forge-{forgeVersion}-installer.jar");
-            string versionString = $"{mcVersion}-{forgeVersion}";
-            string downloadURL= $"https://maven.minecraftforge.net/net/minecraftforge/forge/{versionString}/forge-{versionString}-installer.jar";
-
-            await DownloadFileAsync(downloadURL, savePath);
-        }
-        private async Task InstallForgeServerAsync(string forgeInstallerPath, string targetDirectory)
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "java",
-                    Arguments = $"-jar \"{forgeInstallerPath}\" --installServer",
-                    WorkingDirectory = targetDirectory,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-
-            // Subscribe to output
-            process.OutputDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    lock (_bufferLock)
-                    {
-                        _outputBuffer.AppendLine(e.Data);
-                    }
-                }
-            };
-
-            process.ErrorDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    lock (_bufferLock)
-                    {
-                        _outputBuffer.AppendLine("[ERROR] " + e.Data);
-                    }
-                }
-            };
-
-            process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-            await process.WaitForExitAsync();
-        }
-        private async Task PrepareForgeAsync(string modpackPath, string forgeVersion, string mcVersion)
-        {
-            UpdateInstallButtonState("Downloading...");
-            await DownloadForgeAsync(modpackPath, forgeVersion, mcVersion);
-
-            UpdateInstallButtonState("Installing...");
-            string installerPath = GetInstallerPath();
-            await InstallForgeServerAsync(installerPath, modpackPath);
-
-            // Does some run.bat shenanigans to properly set up the server files
-            UpdateInstallButtonState("Generating Modpack Files...");
-            AppendOutputText("Generating Files...");
-            // Step 1: Run once to generate eula.txt
-            RunServerOnce(modpackPath);
-            UpdateInstallButtonState("Accepting EULA...");
-            AppendOutputText("Accepting EULA...");
-            // Step 2: Change the EULA's text file to true
-            AcceptEula(modpackPath);
-            UpdateInstallButtonState("Generating Server Files...");
-            AppendOutputText("Generating Files...");
-            // Step 3: Run once more to generate the rest of the files
-            StartServer(modpackPath);
-        }
-        private async Task PreparePortForwardAsync()
-        {
-            UpdateServerButtonState("Fetching Public IP...");
-
-            // Gets the public IP from IPify.org and attaches the
-            // default Minecraft server host Port (25565)
-            string publicIp = await _httpClient.GetStringAsync("https://api.ipify.org");
-            if (!string.IsNullOrWhiteSpace(publicIp))
-            {
-                string serverAddress = $"{publicIp.Trim()}:25565";
-                UpdateServerAddressText(serverAddress);
-            }
-            else
-            {
-                MessageBox.Show("Could not fetch your public IP. Please check your internet connection.");
-            }
-        }
-
-        // Method to run the run.bat
-        // This is called twice per new installation;
-        // Once to generate the files, another to actually start the server
-        private void RunServerOnce(string serverDirectory)
-        {
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = "/C run.bat",
-                    WorkingDirectory = serverDirectory,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
-            };
-
-            // Subscribe to output
-            process.OutputDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    lock (_bufferLock)
-                    {
-                        _outputBuffer.AppendLine(e.Data);
-                    }
-                }
-            };
-
-            process.ErrorDataReceived += (sender, e) =>
-            {
-                if (!string.IsNullOrEmpty(e.Data))
-                {
-                    lock (_bufferLock)
-                    {
-                        _outputBuffer.AppendLine("[ERROR] " + e.Data);
-                    }
-                }
-            };
-
-            process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-            if (process != null)
-            {
-                // Give the server 10 secs to generate eula.txt
-                process.WaitForExit(10000);
-                if (!process.HasExited)
-                {
-                    process.Kill();
-                }
-            }
-        }
-        // Changes the eula.txt to set it to "true"
-        private static void AcceptEula(string serverDirectory)
-        {
-            string eulaPath = Path.Combine(serverDirectory, "eula.txt");
-            if (File.Exists(eulaPath))
-            {
-                string text = File.ReadAllText(eulaPath);
-                text = text.Replace("eula=false", "eula=true");
-                File.WriteAllText(eulaPath, text);
-            }
-        }
-        // Method to run the run.bat without killing the process,
-        // to actually start the server
-        private void StartServer(string serverDirectory)
-        {
-            var (mcVersion, forgeVersion) = GetInstalledVersion();
-
-            // For context: This doesn't run the run.bat anymore, this directly
-            // runs the argument file from the libraries, otherwise the commandline
-            // isn't able to be read by the program and thus can't be sent inputs
-            var psi = new ProcessStartInfo
-            {
-                FileName = "java",
-                Arguments = $"@user_jvm_args.txt @libraries/net/minecraftforge/forge/{mcVersion}-{forgeVersion}/win_args.txt",
-                WorkingDirectory = serverDirectory,
-                UseShellExecute = false,
-                RedirectStandardInput = true,
-                CreateNoWindow = true
-            };
-
-            minecraftServerProcess = Process.Start(psi);
-        }
-        private void KillServer()
-        {
-            if (minecraftServerProcess != null && !minecraftServerProcess.HasExited)
-            {
-                // Sends "stop" command like it was typed in the JVM console
-                minecraftServerProcess.StandardInput.WriteLine("stop");
-                minecraftServerProcess.WaitForExit();
-                minecraftServerProcess = null;
-            }
-        }
-        private async Task BeginHostsAsync(string selectedHost, string binariesFolder, string modpackPath)
-        {
-            // Attempts to download and install the selected server host,
-            // in case the user does not have them either in the binaries or in the modpack
-            try
-            {
-                switch (selectedHost)
-                {
-                    case "ngrok":
-                        UpdateServerButtonState("Starting Ngrok...");
-                        await PrepareNgrokAsync(binariesFolder, modpackPath);
-                        break;
-                    case "playit":
-                        UpdateServerButtonState("Starting Playit...");
-                        await PreparePlayitAsync(binariesFolder, modpackPath);
-                        break;
-                    case "portforward":
-                        UpdateServerButtonState("Fetching Public IP...");
-                        await PreparePortForwardAsync();
-                        break;
-                    default:
-                        MessageBox.Show("Please select a valid server host option.");
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error installing server host: {ex.Message}");
-                UpdateServerButtonState("Start Server", true);
-                return;
-            }
-        }
-        private void BeginServer(string modpackPath)
-        {
-            // Attempts to run the server proper
-            try
-            {
-                UpdateServerButtonState("Starting Server...");
-                StartServer(modpackPath);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error starting up server: {ex.Message}");
-            }
-            finally
-            {
-                UpdateServerButtonState("Stop Host", true);
-            }
-        }
-        private void StopHosts(string selectedHost)
-        {
-            try
-            {
-                switch (selectedHost)
-                {
-                    case "ngrok":
-                        UpdateServerButtonState("Stopping Ngrok...");
-                        StopNgrok();
-                        break;
-                    case "playit":
-                        UpdateServerButtonState("Stopping Playit...");
-                        StopPlayit();
-                        break;
-                    default:
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error stopping server process: {ex.Message}");
-            }
-            finally
-            {
-                UpdateServerButtonState("Start Host", true);
-            }
-        }
-
-        // Updates the Install Forge button depending on task
-        private void UpdateInstallButtonState(string text, bool enabled = false)
-        {
-            btnInstallForge.IsEnabled = enabled;
-            btnInstallForge.Header = text;
-        }
-        // Updates the Start Server button depending on task
-        private void UpdateServerButtonState(string text, bool enabled = false)
-        {
-            btnStartServer.IsEnabled = enabled;
-            btnStartServer.Header = text;
-        }
-        // Updates the Restart Server button depending on server status
-        private void UpdateRestartButtonState(string text, bool enabled = false)
-        {
-            btnRestartServer.IsEnabled = enabled;
-            btnRestartServer.Header = text;
-        }
-        // Updates the big 'master' button
-        private void UpdateMasterButtonState(string text, bool enabled = false)
-        {
-            btnMasterRun.Content = text;
-            btnMasterRun.IsEnabled = enabled;
-        }
-        // Updates the Server Adress textblock to the public URL
-        private void UpdateServerAddressText(string text)
-        {
-            btnServerAddress.Content = text;
-        }
-        // Appends text to the output window
-        private void AppendOutputText(string text)
-        {
-            txtDebugOutput.AppendText(text + Environment.NewLine);
-            txtDebugOutput.ScrollToEnd();
-        }
-        private void FlushOutputToUI()
-        {
-            string textToAppend;
-
-            lock (_bufferLock)
-            {
-                if (_outputBuffer.Length == 0) return;
-                textToAppend = _outputBuffer.ToString();
-                _outputBuffer.Clear();
-            }
-
-            txtDebugOutput.AppendText(textToAppend);
-            txtDebugOutput.ScrollToEnd();
-        }
-
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
             // Populates the Minecraft Version combobox
-            var mcVersions = await GetAvailableMcVersionsAsync();
+            var mcVersions = await _utilsService.GetAvailableMcVersionsAsync();
             cbMinecraftVersion.ItemsSource = mcVersions.Reverse();
             cbMinecraftVersion.SelectedIndex = 0;
 
@@ -862,17 +74,17 @@ namespace MinecraftServerTool
             // Fetches the modpack path and MC version, then validates
             string modpackPath = txtModpackFolderPath.Text;
             string mcVersion = cbMinecraftVersion.SelectedItem as string;
-            if (!ValidateInputs(modpackPath, mcVersion)) return;
+            if (!UtilsService.ValidateInputs(modpackPath, mcVersion)) return;
 
             // Fetches the current Forge versions and then the selected one that will be used
-            string forgeVersion = await GetSelectedForgeVersion();
+            string forgeVersion = await _utilsService.GetSelectedForgeVersion();
 
             // Attempts to set up Forge Server and pauses until finished
             // But throws an error message if unsuccessful
             // Also updates the Install Forge button as per Task
             try
             {
-                await PrepareForgeAsync(modpackPath, forgeVersion, mcVersion);
+                await _forgeService.PrepareForgeAsync(modpackPath, forgeVersion, mcVersion);
             }
             catch (Exception ex)
             {
@@ -880,9 +92,9 @@ namespace MinecraftServerTool
             }
             finally
             {
-                UpdateInstallButtonState("✔ Installed");
-                UpdateServerButtonState("Stop Host", true);
-                UpdateRestartButtonState("Restart Server", true);
+                _uiService.UpdateInstallButtonState("✔ Installed");
+                _uiService.UpdateServerButtonState("Stop Host", true);
+                _uiService.UpdateRestartButtonState("Restart Server", true);
             }
         }
         
@@ -890,21 +102,21 @@ namespace MinecraftServerTool
         {
             string modpackPath = txtModpackFolderPath.Text.Trim();
             string binariesFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "binaries");
-            string selectedHost = GetSelectedHost();
+            string selectedHost = _utilsService.GetSelectedHost();
             string buttonPrompt = btnStartServer.Header.ToString();
 
             switch (buttonPrompt)
             {
                 case "Start Server":
-                    await BeginHostsAsync(selectedHost, binariesFolder, modpackPath);
-                    BeginServer(modpackPath);
+                    await _serverService.BeginHostsAsync(selectedHost, binariesFolder, modpackPath);
+                    _serverService.BeginServer(modpackPath);
                     break;
                 case "Stop Host":
-                    StopHosts(selectedHost);
-                    UpdateServerAddressText("N/A");
+                    _serverService.StopHosts(selectedHost);
+                    _uiService.UpdateServerAddressText("N/A");
                     break;
                 case "Start Host":
-                    await BeginHostsAsync(selectedHost, binariesFolder, modpackPath);
+                    await _serverService.BeginHostsAsync(selectedHost, binariesFolder, modpackPath);
                     break;
                 default:
                     break;
@@ -918,13 +130,13 @@ namespace MinecraftServerTool
             if (btnRestartServer.Header.ToString() == "Restart Required")
                 ServerPropertiesService.SaveServerProperties(modpackPath, mainVm.ServerProperties);
 
-            UpdateRestartButtonState("Saving...");
-            KillServer();
+            _uiService.UpdateRestartButtonState("Saving...");
+            _serverService.KillServer();
             await Task.Delay(5000);
-            UpdateRestartButtonState("Restarting...");
-            StartServer(modpackPath);
+            _uiService.UpdateRestartButtonState("Restarting...");
+            _serverService.StartServer(modpackPath);
             await Task.Delay(5000);
-            UpdateRestartButtonState("Restart Server", true);
+            _uiService.UpdateRestartButtonState("Restart Server", true);
         }
 
         // Change the Forge versions to fit the currently selected Minecraft version
@@ -937,7 +149,7 @@ namespace MinecraftServerTool
             if (cbMinecraftVersion.SelectedItem == null)
                 return;
 
-            await PopulateCustomForgeBuildCombobox();
+            await _utilsService.PopulateCustomForgeBuildCombobox();
         }
 
         // Enables or disables the custom Forge build combobox
@@ -967,11 +179,11 @@ namespace MinecraftServerTool
         {
             // Changes the Install Forge button to "Installed" if eula.txt has been set to true
             // Also updates the Minecraft Version and Forge Version comboboxes to reflect this
-            bool isInstalled = ValidateServerInstallation(txtModpackFolderPath.Text);
+            bool isInstalled = _utilsService.ValidateServerInstallation(txtModpackFolderPath.Text);
 
             if (isInstalled)
             {
-                var (mcVersion, forgeVersion) = GetInstalledVersion();
+                var (mcVersion, forgeVersion) = _utilsService.GetInstalledVersion();
 
                 // Updates the comboboxes to reflect the versions
                 cbMinecraftVersion.SelectedItem = mcVersion;
@@ -1026,50 +238,50 @@ namespace MinecraftServerTool
 
             if(btnMasterRun.Content.ToString() == "Run Server")
             {
-                UpdateMasterButtonState("Preparing...");
+                _uiService.UpdateMasterButtonState("Preparing...");
 
-                AppendOutputText("Validating Inputs...");
-                bool isPopulated = ValidateInputs(modpackPath, mcVersion);
+                _uiService.AppendOutputText("Validating Inputs...");
+                bool isPopulated = UtilsService.ValidateInputs(modpackPath, mcVersion);
                 if (isPopulated)
                 {
-                    AppendOutputText("Checking if server is already installed...");
-                    bool isInstalled = ValidateServerInstallation(modpackPath);
+                    _uiService.AppendOutputText("Checking if server is already installed...");
+                    bool isInstalled = _utilsService.ValidateServerInstallation(modpackPath);
                     if (isInstalled)
                     {
-                        AppendOutputText("Starting the server...");
+                        _uiService.AppendOutputText("Starting the server...");
                         btnStartServer_Click(sender, e);
                     }
                     else
                     {
                         // Just a failsafe to autoselect the stable Forge version
                         // in case none of the radioboxes are checked
-                        string selectedForgeVersion = await GetSelectedForgeVersion();
+                        string selectedForgeVersion = await _utilsService.GetSelectedForgeVersion();
                         if (selectedForgeVersion == "None")
                             rbStable.IsChecked = true;
 
-                        AppendOutputText("Installing Forge...");
-                        await PrepareForgeAsync(modpackPath, selectedForgeVersion, mcVersion);
+                        _uiService.AppendOutputText("Installing Forge...");
+                        await _forgeService.PrepareForgeAsync(modpackPath, selectedForgeVersion, mcVersion);
 
-                        AppendOutputText("Starting the server...");
+                        _uiService.AppendOutputText("Starting the server...");
                         btnStartServer_Click(sender, e);
                     }
                     // Gives a 20 second buffer to let the server's JVM boot up
                     await Task.Delay(20000);
-                    UpdateMasterButtonState("Stop Server", true);
+                    _uiService.UpdateMasterButtonState("Stop Server", true);
                     return;
                 }
             }
             
             if(btnMasterRun.Content.ToString() == "Stop Server")
             {
-                string selectedHost = GetSelectedHost();
+                string selectedHost = _utilsService.GetSelectedHost();
 
-                AppendOutputText("Stopping the server...");
-                KillServer();
-                AppendOutputText("Stopping tunneling service...");
-                StopHosts(selectedHost);
+                _uiService.AppendOutputText("Stopping the server...");
+                _serverService.KillServer();
+                _uiService.AppendOutputText("Stopping tunneling service...");
+                _serverService.StopHosts(selectedHost);
 
-                UpdateMasterButtonState("Run Server", true);
+                _uiService.UpdateMasterButtonState("Run Server", true);
                 return;
             }
         }
