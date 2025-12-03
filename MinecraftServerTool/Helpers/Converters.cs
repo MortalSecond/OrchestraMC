@@ -101,6 +101,14 @@ namespace MinecraftServerTool.Helpers
             {
                 case "Everything":
                     return "0";
+                case "64":
+                    return "64";
+                case "128":
+                    return "128";
+                case "256":
+                    return "256";
+                case "512":
+                    return "512";
                 case "Disabled":
                     return "-1";
                 default:
