@@ -128,6 +128,12 @@ namespace MinecraftServerTool.Services
         {
             try
             {
+                string directory = Path.GetDirectoryName(savePath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
                 using var response = await _httpClient.GetAsync(downloadURL, HttpCompletionOption.ResponseHeadersRead);
                 response.EnsureSuccessStatusCode();
 
