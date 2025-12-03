@@ -188,11 +188,16 @@ namespace MinecraftServerTool
             {
                 var (mcVersion, forgeVersion) = _utilsService.GetInstalledVersion();
 
-                // Updates the comboboxes to reflect the versions
-                cbMinecraftVersion.SelectedItem = mcVersion;
-                rbCustom.IsChecked = true;
-                rbCustom_Checked(sender, e);
-                cbCustomBuild.SelectedItem = forgeVersion;
+                // Null check to prevent crashes at startup
+                // Only updates if there's actually version info
+                if (!string.IsNullOrEmpty(mcVersion) && !string.IsNullOrEmpty(forgeVersion))
+                {
+                    // Updates the comboboxes to reflect the versions
+                    cbMinecraftVersion.SelectedItem = mcVersion;
+                    rbCustom.IsChecked = true;
+                    rbCustom_Checked(sender, e);
+                    cbCustomBuild.SelectedItem = forgeVersion;
+                }
 
                 // Makes all buttons and sidebars usable and visible
                 spServerPropertiesPanel.Visibility = Visibility.Visible;

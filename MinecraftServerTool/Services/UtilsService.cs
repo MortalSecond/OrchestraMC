@@ -114,14 +114,33 @@ namespace MinecraftServerTool.Services
             // Since Forge doesn't produce a manifest.json for easy version handling, this
             // basically uses the folder name inside the libraries folder, then it splits
             // it into two to get the necessary version strings
-            string modpackPath = _mainWindow.txtModpackFolderPath.Text;
-            string folderPath = Path.Combine(modpackPath, "libraries", "net", "minecraftforge", "forge");
-            string folderName = Path.GetFileName(Directory.GetDirectories(folderPath).First());
-            var parts = folderName.Split('-');
-            string mcVersion = parts[0];
-            string forgeVersion = parts[1];
 
-            return (mcVersion, forgeVersion);
+            // ALSO:
+            // It also checks that the folder does indeed contain the libraries folder or
+            // else returns a null -- used to prevent crashes at startup.
+            try
+            {
+                string modpackPath = _mainWindow.txtModpackFolderPath.Text;
+                string folderPath = Path.Combine(modpackPath, "libraries", "net", "minecraftforge", "forge");
+
+                if (!Directory.Exists(folderPath))
+                    return (null, null);
+                var directories = Directory.GetDirectories(folderPath);
+                if (directories.Length == 0) 
+                    return (null, null);
+
+                string folderName = Path.GetFileName(Directory.GetDirectories(folderPath).First());
+                var parts = folderName.Split('-');
+
+                string mcVersion = parts[0];
+                string forgeVersion = parts[1];
+
+                return (mcVersion, forgeVersion);
+            }
+            catch (Exception ex)
+            {
+                return (null, null);
+            }
         }
         // Helper HttpClient for the download of files
         public async Task DownloadFileAsync(string downloadURL, string savePath)
